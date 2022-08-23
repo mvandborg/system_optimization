@@ -152,6 +152,8 @@ Snoisebw = [Snoisefw_fib]
 Snoisefw = [Snoisebw_fib]
 Gsmall = [Ppr_fib[-1]/Ppr_fib[0]]
 
+# To be done: Create fiber classes
+
 for i in range(0,Nsec):
     #2: Co-transmission
     
