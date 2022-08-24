@@ -144,20 +144,11 @@ Fiber_Sum150.add_raman(df_raman,gamma_raman/Aeff1)
 
 dir_edf = r'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/fiber_data/ofs_edf/'
 file_edf = r'LP980_11841.s'
-EDF = Erbiumfiber_class.from_ofs_files(dir_edf, file_edf)
+Fiber_edf = Erbiumfiber_class.from_ofs_files(dir_edf, file_edf)
 
 # %% Numerical parameters
 
-Nlamnoise = 51
-lam_noise_init = np.linspace(1500,1600,Nlamnoise+1)*1e-9
 
-lam_noise = lam_noise_init[0:Nlamnoise]
-BW_noise = c*(1/lam_noise_init[0:-1]-1/lam_noise_init[1:])
-f_noise = c/lam_noise
-
-idx_noise = np.argmin(np.abs(lam_noise-lam_pr))
-
-Nz = 501
 
 # %% Fiber section parameters
 L0 = 100e3
@@ -173,102 +164,37 @@ Fiber_fib0 = Fiber_Sum150
 Fiber_pd0 = Fiber_Sum150
 
 Fiber_co = [Fiber_SumULL]
+Fiber_edf = [Fiber_edf]
 Fiber_fib = [Fiber_SumULL]
 Fiber_pd = [Fiber_SumULL]
 
 # %% Numerical simulation
-
+Nlamnoise = 51
+lamnoise_min = 1500*1e-9
+lamnoise_max = 1600*1e-9
+Nz = 501
 Sim = System_simulation_class(lam_p,lam_pr,Ppr0,Pp0,L0,Fiber_fib0,Fiber_pd0,Nz,\
                               Tpulse,T,f_b,FWHM_b,ng,g_b)
-Sim.add_section(1,12,150e3,Fiber_SumULL,EDF,Fiber_SumULL,Fiber_SumULL,1)
-Sim.add_noise(1500*1e-9,1600*1e-9,Nlamnoise)
+Sim.add_section(L_co[0],L_edf[0],L_fib[0],Fiber_co[0],\
+                Fiber_edf[0],Fiber_fib[0],Fiber_pd[0],C[0])
+Sim.add_noise(lamnoise_min,lamnoise_max,Nlamnoise)
 
-Ppmean0 = 1e-6
-
-z_fib,Pp_fib,Ppr_fib,Snoisefw_fib,Snoisebw_fib = prop_transmissionfiber(L0,Nz,0*Ppmean0,Ppr0,Fiber_fib0)
-Pp_pdf_fib = Pp0*exp(-Fiber_pd0.alpha[0]*z_fib)
-
-z = z_fib
-Pp = Pp_fib
-Ppr = Ppr_fib
-Ppmean = Ppmean0*exp(-Fiber_fib0.alpha[0]*z_fib)
-Pp_pdf = Pp_pdf_fib
-Snoisebw = [Snoisefw_fib]
-Snoisefw = [Snoisebw_fib]
-Gsmall = [Ppr_fib[-1]/Ppr_fib[0]]
-
-for i in range(0,Sim.Nsec):
-    #2: Co-transmission
-    
-    Pp_start = Pp_pdf_fib[-1]*C[i]+Pp_fib[-1]*(1-C[i])
-    Ppr_start = Ppr_fib[-1]
-    z_co,Pp_co,Ppr_co,Snoisefw_co,Snoisebw_co = prop_transmissionfiber(L_co[i],Nz,Pp_start,Ppr_start,Fiber_co[i])
-    Ppmean_co = Pp_start*exp(-Fiber_co[i].alpha[0]*z_co)
-    Pp_pdf_co = Pp_pdf_fib[-1]*(1-C[i])*exp(-Fiber_pd[i].alpha[0]*z_co)
-    Snoisefw.append(Snoisefw_co)
-    Snoisebw.append(Snoisebw_co)
-    Gsmall.append(Ppr_co[-1]/Ppr_co[0])
-    
-    #3: EDF fiber section
-    z_edf,Ppmean_edf,Pprmean_edf,Pnoisefw_edf,Pnoisebw_edf = prop_EDF(EDF,L_edf[i],Nz,Ppmean_co[-1],1e-6,lam_noise_init)
-    Gp_edf = Ppmean_edf/Ppmean_edf[0]
-    Gpr_edf = Pprmean_edf/Pprmean_edf[0]
-    Pp_edf = Pp_co[-1]*Gp_edf
-    Ppr_edf = Ppr_co[-1]*Gpr_edf
-    Pp_pdf_edf = Pp_pdf_co[-1]*exp(-Fiber_co[i].alpha[0]*z_edf)
-    Snoisebw.append(Pnoisebw_edf[idx_noise,0])
-    Snoisefw.append(Pnoisefw_edf[idx_noise,-1])
-    Gsmall.append(Gpr_edf[-1])
-    
-    #4: Transmission fiber section 
-    z_fib,Pp_fib,Ppr_fib,Snoisefw_fib,Snoisebw_fib = prop_transmissionfiber(L_fib[i],Nz,Pp_edf[-1],Ppr_edf[-1],Fiber_fib[i])
-    Ppmean_fib = Ppmean_edf[-1]*exp(-Fiber_fib[i].alpha[0]*z_fib)
-    Pp_pdf_fib = Pp_pdf_edf[-1]*exp(-Fiber_pd[i].alpha[0]*z_fib)
-    Snoisefw.append(Snoisefw_fib)
-    Snoisebw.append(Snoisebw_fib)
-    Gsmall.append(Ppr_fib[-1]/Ppr_fib[0])
-    
-    
-    z = np.concatenate([z,z[-1]+z_co])
-    z = np.concatenate([z,z[-1]+z_edf])
-    z = np.concatenate([z,z[-1]+z_fib])
-    Pp = np.concatenate([Pp,Pp_co,Pp_edf,Pp_fib])
-    Ppr = np.concatenate([Ppr,Ppr_co,Ppr_edf,Ppr_fib])
-    Ppmean = np.concatenate([Ppmean,Ppmean_co,Ppmean_edf,Ppmean_fib])
-    Pp_pdf = np.concatenate([Pp_pdf,Pp_pdf_co,Pp_pdf_edf,Pp_pdf_fib])
-
-
-# %% Post processing
-Gacc = 1
-Snoisebw_total = Snoisebw[0]*Gacc
-for i in range(0,len(Gsmall)-1):
-    Gacc = Gacc*Gsmall[i]
-    Snoisebw_total = Snoisebw_total+Snoisebw[i+1]*Gacc
-
-
-Epr = Ppr*Tpulse        # Pulse energy (nJ)
-P_b = kB*T*Gamma_b*f_pr/(4*f_b)*g_b*vg*Epr#*exp(1/2*g_b*vg*Epr)
-
-P_b_end = P_b[-1]*Gacc*Gsmall[-1]
-
-SNR = P_b_end/(Snoisebw_total*FWHM_b)
+Res = Sim.run()
+SNR = Res.calc_SNR()
 
 
 # %% Plotting
 
+
 plt.close('all')
 
 fig0,ax0 = plt.subplots()
-ax0.plot(z*1e-3,dbm(Pp),label='Pump pulse power')
-ax0.plot(z*1e-3,dbm(Ppmean),label='Pump mean power')
-ax0.plot(z*1e-3,dbm(Ppr),label='Probe power')
-ax0.plot(z*1e-3,dbm(Pp_pdf),label='Pump delivery fiber power')
+ax0.plot(Res.z*1e-3,dbm(Res.Pp),label='Pump pulse power')
+ax0.plot(Res.z*1e-3,dbm(Res.Ppmean),label='Pump mean power')
+ax0.plot(Res.z*1e-3,dbm(Res.Ppr),label='Probe power')
+ax0.plot(Res.z*1e-3,dbm(Res.Pp_pdf),label='Pump delivery fiber power')
 ax0.set_ylabel('Power (dBm)')
 ax0.set_xlabel('z (km)')
 ax0.legend()
 
-fig1,ax1 = plt.subplots(constrained_layout=True)
-ax1.plot(lam_noise*1e9,dbm(Pnoisebw_edf[:,0]))
-ax1.set_xlabel('Wavelength (nm)')
-ax1.set_ylabel('Noise power (dBm/Hz)')
 

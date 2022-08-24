@@ -36,16 +36,18 @@ class System_solver_class:
         self.Fiber_pd = S.Fiber_pd
         
         self.L0 = S.L0
-        self.L_co = S.L_c0
+        self.L_co = S.L_co
         self.L_edf = S.L_edf
         self.L_fib = S.L_fib
         self.Nsec = S.Nsec
-        
+                
         self.C = S.C
+        self.Nz = S.Nz
+        self.Temp = S.Temp
         
         self.Ppmean0 = 1e-6
         self.no_of_modes = 2
-        
+                
         self.lam_noise_init = S.lam_noise_init
         self.idx_noise = S.idx_noise
 
@@ -125,7 +127,7 @@ class System_solver_class:
         Ppr = res.y[1]
         Gfw = Ppr/Ppr[0]
         Gbw = Gfw[-1]/Gfw
-        nsp = 1/(1-exp(-h*(self.f_p-self.f_pr)/(kB*self.T)))
+        nsp = 1/(1-exp(-h*(self.f_p-self.f_pr)/(kB*self.Temp)))
         Sase_fw = nsp*h*f_pr*gr*Gfw[-1]*simpson(Pp/Gfw,z)
         Sase_bw = nsp*h*f_pr*gr*Gbw[0]*simpson(Pp/Gbw,z)
         return z,Pp,Ppr,Sase_fw,Sase_bw
@@ -179,9 +181,8 @@ class System_result_class:
         return P_b  
         
     def calc_noise_power(self):
-        S = self.Sim_class
-        Gsmall = S.Gsmall
-        Snoisebw = S.Snoisebw
+        Gsmall = self.Gsmall
+        Snoisebw = self.Snoisebw
         Gacc = 1
         Snoisebw_total = Snoisebw[0]*Gacc
         for i in range(0,len(Gsmall)-1):

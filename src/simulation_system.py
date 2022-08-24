@@ -9,6 +9,7 @@ sys.path.insert(0, 'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/cod
 import numpy as np
 from solver_system import System_solver_class
 from scipy.constants import c
+from numpy import pi
 c = c*1e-9              # Unit m/ns
 
 class System_simulation_class:
@@ -16,6 +17,10 @@ class System_simulation_class:
                  Tpulse,Temp,f_b,FWHM_b,ng,g_b):
         self.lam_p = lam_p
         self.lam_pr = lam_pr
+        self.f_p = c/self.lam_p
+        self.f_pr = c/self.lam_pr
+        self.omega_p = 2*pi*self.f_p
+        self.omega_pr = 2*pi*self.f_pr
         self.Ppr0 = Ppr0
         self.Pp0 = Pp0
         
@@ -47,6 +52,7 @@ class System_simulation_class:
         self.Temp = Temp
         self.f_b = f_b
         self.FWHM_b = FWHM_b
+        self.Gamma_b = 2*pi*self.FWHM_b
         self.ng = ng
         self.g_b = g_b
         self.vg = c/ng
