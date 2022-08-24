@@ -14,7 +14,9 @@ sys.path.append(file_dir)
 
 
 from IPython import get_ipython
-get_ipython().magic('reset -sf') 
+get_ipython().magic('reset -sf')
+import sys
+sys.path.insert(0, 'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/code')
 
 import numpy as np
 from scipy.integrate import solve_ivp
@@ -24,8 +26,8 @@ from scipy.integrate import simpson
 from scipy.optimize import minimize
 import matplotlib.pyplot as plt
 from numpy import log10,exp,pi
-from erbium_model.fiberdata_erbium import Erbiumfiber_class
-from erbium_model.simulation_erbium import Erbium_simulation_class
+from erbium_model.src.fiberdata_erbium import Erbiumfiber_class
+from erbium_model.src.simulation_erbium import Erbium_simulation_class
 c = c*1e-9              # Unit m/ns
 
 def dbm(P):
