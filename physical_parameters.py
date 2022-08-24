@@ -34,7 +34,6 @@ g_b = 0.1470            # Brillouin gain factor(1/W/m)
 gamma_raman = 1.72e-14  # Raman gain coefficient (m/W)
 df_raman = f_p-f_pr
 
-
 # Define fiber parameters
 
 # Sumitomo Z Fiber LL

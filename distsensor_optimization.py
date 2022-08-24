@@ -5,29 +5,18 @@ Created on Mon Jun 13 15:45:34 2022
 @author: madshv
 """
 
-"""
+from IPython import get_ipython
+get_ipython().magic('reset -sf')
 import os
 import sys
 file_dir = os.path.dirname(__file__)
 sys.path.append(file_dir)
-"""
-
-
-from IPython import get_ipython
-get_ipython().magic('reset -sf')
-import sys
 sys.path.insert(0, 'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/code')
 
 import numpy as np
-from scipy.constants import c
-from scipy.optimize import minimize
 import matplotlib.pyplot as plt
-from numpy import log10,exp,pi
-from erbium_model.src.fiberdata_erbium import Erbiumfiber_class
 from help_functions import dbm
-from src.fiberdata_passive import Passivefiber_class
 from src.simulation_system import System_simulation_class
-c = c*1e-9              # Unit m/ns
 
 # Import physical parameters
 from physical_parameters import *
@@ -36,11 +25,11 @@ from physical_parameters import *
 Pp0 = 1.35              # Pump power (W)
 Ppr0 = 0.062           # Probe power (W)
 
-L0 = 150e3
+L0 = 120e3
 L_co = [1]
-L_edf = [9]
+L_edf = [17]
 L_fib =  [150e3]
-C = [0.5]
+C = [1]
 
 L_fib[-1] = 300e3-(L0+np.sum(L_co)+np.sum(L_edf)+np.sum(L_fib[0:-1]))
 L_tot = L0+np.sum(L_co)+np.sum(L_edf)+np.sum(L_fib)
