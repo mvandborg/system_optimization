@@ -19,71 +19,19 @@ import sys
 sys.path.insert(0, 'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/code')
 
 import numpy as np
-from scipy.integrate import solve_ivp
-from scipy.constants import c,h
-from scipy.constants import k as kB
-from scipy.integrate import simpson
+from scipy.constants import c
 from scipy.optimize import minimize
 import matplotlib.pyplot as plt
 from numpy import log10,exp,pi
 from erbium_model.src.fiberdata_erbium import Erbiumfiber_class
-from erbium_model.src.simulation_erbium import Erbium_simulation_class
-from help_functions import dbm,db_to_np
+from help_functions import dbm
 from src.fiberdata_passive import Passivefiber_class
 from src.simulation_system import System_simulation_class
 c = c*1e-9              # Unit m/ns
 
-def propeq(z,P,f_p,f_r,alpha_p,alpha_pr,gr):
-    Pp,Ppr = P
-    dPp = -alpha_p*Pp-f_p/f_pr*gr*Pp*Ppr
-    dPpr = -alpha_pr*Ppr+gr*Pp*Ppr
-    return [dPp,dPpr]
-
-def prop_transmissionfiber(L,Nz,Pp0,Ppr0,Fiber):
-    zspan = [0,L]
-    z = np.linspace(zspan[0],zspan[1],Nz)
-    f_p = Fiber.f[0]
-    f_pr = Fiber.f[1]
-    alpha_p = Fiber.alpha[0]
-    alpha_pr = Fiber.alpha[1]
-    gr = Fiber.gr
-    res = solve_ivp(propeq,zspan,[Pp0,Ppr0],method='RK45',
-                    t_eval=z,rtol=1e-13,atol=1e-11,args=(f_p,f_pr,alpha_p,alpha_pr,gr))
-    Pp = res.y[0]
-    Ppr = res.y[1]
-    Gfw = Ppr/Ppr[0]
-    Gbw = Gfw[-1]/Gfw
-    T = 300
-    nsp = 1/(1-exp(-h*(f_p-f_pr)/(kB*T)))
-    Sase_fw = nsp*h*f_pr*gr*Gfw[-1]*simpson(Pp/Gfw,z)
-    Sase_bw = nsp*h*f_pr*gr*Gbw[0]*simpson(Pp/Gbw,z)
-    return z,Pp,Ppr,Sase_fw,Sase_bw
-
-def prop_EDF(EDFclass,L,Nz,Pp0,Ppr0,lam_noise_init):
-    z_EDF = np.linspace(0,L,Nz)
-    no_of_modes = 2     # Number of optical modes in the fiber
-    Sim_EDF = Erbium_simulation_class(EDFclass,no_of_modes,z_EDF)
-    Sim_EDF.add_fw_signal(lam_p,Pp0)
-    Sim_EDF.add_fw_signal(lam_pr,Ppr0)
-    Sim_EDF.add_noise(lam_noise_init)
-    res,_ = Sim_EDF.run()
-    z_EDF = res.x
-    Pp = res.y[0]
-    Ppr = res.y[1]
-    
-    Nlamnoise = len(lam_noise_init)-1
-    P_noisefw = res.y[2:2+int(Nlamnoise)]
-    P_noisebw = res.y[2+int(Nlamnoise):]
-    S_noisefw = np.zeros(P_noisefw.shape)
-    S_noisebw = np.zeros(P_noisebw.shape)
-    for i in range(0,len(z_EDF)):
-        S_noisefw[:,i] = P_noisefw[:,i]/Sim_EDF.BW_noise[0:Nlamnoise]
-        S_noisebw[:,i] = P_noisebw[:,i]/Sim_EDF.BW_noise[0:Nlamnoise]
-    return z_EDF,Pp,Ppr,S_noisefw,S_noisebw
-
-
+# %% Define physical parameters
 Pp0 = 1.35              # Pump power (W)
-Ppr0 = 62e-3           # Probe power (W)
+Ppr0 = 0.062           # Probe power (W)
 lam_p = 1480e-9         # Wavelength (m)
 lam_pr = 1550e-9
 
@@ -146,16 +94,12 @@ dir_edf = r'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/fiber_data/
 file_edf = r'LP980_11841.s'
 Fiber_edf = Erbiumfiber_class.from_ofs_files(dir_edf, file_edf)
 
-# %% Numerical parameters
-
-
-
 # %% Fiber section parameters
-L0 = 100e3
+L0 = 150e3
 L_co = [1]
-L_edf = [12]
+L_edf = [9]
 L_fib =  [150e3]
-C = [1]
+C = [0.5]
 
 L_fib[-1] = 300e3-(L0+np.sum(L_co)+np.sum(L_edf)+np.sum(L_fib[0:-1]))
 L_tot = L0+np.sum(L_co)+np.sum(L_edf)+np.sum(L_fib)
@@ -168,11 +112,12 @@ Fiber_edf = [Fiber_edf]
 Fiber_fib = [Fiber_SumULL]
 Fiber_pd = [Fiber_SumULL]
 
-# %% Numerical simulation
-Nlamnoise = 51
+# %% Simulation
+Nlamnoise = 16
 lamnoise_min = 1500*1e-9
 lamnoise_max = 1600*1e-9
 Nz = 501
+
 Sim = System_simulation_class(lam_p,lam_pr,Ppr0,Pp0,L0,Fiber_fib0,Fiber_pd0,Nz,\
                               Tpulse,T,f_b,FWHM_b,ng,g_b)
 Sim.add_section(L_co[0],L_edf[0],L_fib[0],Fiber_co[0],\
@@ -184,7 +129,6 @@ SNR = Res.calc_SNR()
 
 
 # %% Plotting
-
 
 plt.close('all')
 
