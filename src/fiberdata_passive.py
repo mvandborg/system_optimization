@@ -5,7 +5,6 @@ Created on Mon Aug 22 11:48:25 2022
 @author: madshv
 """
 
-import numpy as np
 from numpy import pi
 from scipy.constants import c
 c = c*1e-9              # Unit m/ns

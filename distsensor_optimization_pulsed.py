@@ -116,10 +116,10 @@ def prop_EDF(EDFclass,Nz,Pp0,Ppr0,L):
 
 # Physical parameters
 Pp0 = 1.375             # CW pump power (W)
-Ppr0 = 0.195            # Probe peak power (W)
+Ppr0 = 0.062            # Probe peak power (W)
 
 T0pr = 75               # Probe duration (ns)
-lam_p = 1490e-9         # Wavelength (m)
+lam_p = 1480e-9         # Wavelength (m)
 lam_pr = 1550e-9        
 
 f_p = c/lam_p           # Frequency (GHz)
@@ -174,11 +174,11 @@ file_edf = r'LP980_11841.s'
 EDF = Erbiumfiber_class.from_ofs_files(dir_edf, file_edf)
 
 # Define propagation fibers
-L0 = 20e3
+L0 = 100e3
 
-L_co = [120e3]
-L_edf = [0.1]
-L_fib = [5]
+L_co = [1]
+L_edf = [12]
+L_fib = [150e3]
 C = [1.00]    # Coupling factor
 
 Fiber_fib0 = Fiber_Sum150

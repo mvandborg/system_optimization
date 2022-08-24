@@ -30,6 +30,7 @@ from erbium_model.src.fiberdata_erbium import Erbiumfiber_class
 from erbium_model.src.simulation_erbium import Erbium_simulation_class
 from help_functions import dbm,db_to_np
 from src.fiberdata_passive import Passivefiber_class
+from src.simulation_system import System_simulation_class
 c = c*1e-9              # Unit m/ns
 
 def propeq(z,P,f_p,f_r,alpha_p,alpha_pr,gr):
@@ -82,10 +83,9 @@ def prop_EDF(EDFclass,L,Nz,Pp0,Ppr0,lam_noise_init):
 
 
 Pp0 = 1.35              # Pump power (W)
-Ppr0 = 200e-3           # Probe power (W)
-lam_p = 1490e-9         # Wavelength (m)
+Ppr0 = 62e-3           # Probe power (W)
+lam_p = 1480e-9         # Wavelength (m)
 lam_pr = 1550e-9
-
 
 f_p = c/lam_p           # Frequencies (GHz)
 f_pr = c/lam_pr
@@ -98,7 +98,8 @@ T = 300                 # Temperature (K)
 f_b = 10.8              # Brillouin frequency shift (GHz)
 FWHM_b = 38e-3          # FWHM of Brillouin peak (GHz)
 Gamma_b = 2*pi*FWHM_b
-vg = c/1.45             # Group velocity (m/ns)
+ng = 1.45
+vg = c/ng               # Group velocity (m/ns)
 g_b = 0.1470            # Brillouin gain factor(1/W/m)
 
 # %% Define fibers
@@ -161,7 +162,7 @@ Nz = 501
 # %% Fiber section parameters
 L0 = 100e3
 L_co = [1]
-L_edf = [10]
+L_edf = [12]
 L_fib =  [150e3]
 C = [1]
 
@@ -175,7 +176,13 @@ Fiber_co = [Fiber_SumULL]
 Fiber_fib = [Fiber_SumULL]
 Fiber_pd = [Fiber_SumULL]
 
-# %% Numerical propagation
+# %% Numerical simulation
+
+Sim = System_simulation_class(lam_p,lam_pr,Ppr0,Pp0,L0,Fiber_fib0,Fiber_pd0,Nz,\
+                              Tpulse,T,f_b,FWHM_b,ng,g_b)
+Sim.add_section(1,12,150e3,Fiber_SumULL,EDF,Fiber_SumULL,Fiber_SumULL,1)
+Sim.add_noise(1500*1e-9,1600*1e-9,Nlamnoise)
+
 Ppmean0 = 1e-6
 
 z_fib,Pp_fib,Ppr_fib,Snoisefw_fib,Snoisebw_fib = prop_transmissionfiber(L0,Nz,0*Ppmean0,Ppr0,Fiber_fib0)
@@ -190,8 +197,7 @@ Snoisebw = [Snoisefw_fib]
 Snoisefw = [Snoisebw_fib]
 Gsmall = [Ppr_fib[-1]/Ppr_fib[0]]
 
-Nsec = len(L_co)
-for i in range(0,Nsec):
+for i in range(0,Sim.Nsec):
     #2: Co-transmission
     
     Pp_start = Pp_pdf_fib[-1]*C[i]+Pp_fib[-1]*(1-C[i])
@@ -246,7 +252,6 @@ P_b = kB*T*Gamma_b*f_pr/(4*f_b)*g_b*vg*Epr#*exp(1/2*g_b*vg*Epr)
 P_b_end = P_b[-1]*Gacc*Gsmall[-1]
 
 SNR = P_b_end/(Snoisebw_total*FWHM_b)
-
 
 
 # %% Plotting
