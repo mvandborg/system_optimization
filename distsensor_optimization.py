@@ -28,22 +28,26 @@ import matplotlib.pyplot as plt
 from numpy import log10,exp,pi
 from erbium_model.src.fiberdata_erbium import Erbiumfiber_class
 from erbium_model.src.simulation_erbium import Erbium_simulation_class
+from help_functions import dbm,db_to_np
+from src.fiberdata_passive import Passivefiber_class
 c = c*1e-9              # Unit m/ns
 
-def dbm(P):
-    return 10*log10(P)+30
-
-def propeq(z,P,gr,f_p,f_pr,alpha_p,alpha_pr):
+def propeq(z,P,f_p,f_r,alpha_p,alpha_pr,gr):
     Pp,Ppr = P
     dPp = -alpha_p*Pp-f_p/f_pr*gr*Pp*Ppr
     dPpr = -alpha_pr*Ppr+gr*Pp*Ppr
     return [dPp,dPpr]
 
-def prop_transmissionfiber(L,Nz,Pp0,Ppr0,gr,f_p,f_pr,alpha_p,alpha_pr):
+def prop_transmissionfiber(L,Nz,Pp0,Ppr0,Fiber):
     zspan = [0,L]
     z = np.linspace(zspan[0],zspan[1],Nz)
+    f_p = Fiber.f[0]
+    f_pr = Fiber.f[1]
+    alpha_p = Fiber.alpha[0]
+    alpha_pr = Fiber.alpha[1]
+    gr = Fiber.gr
     res = solve_ivp(propeq,zspan,[Pp0,Ppr0],method='RK45',
-                    t_eval=z,rtol=1e-13,atol=1e-11,args=(gr,f_p,f_pr,alpha_p,alpha_pr))
+                    t_eval=z,rtol=1e-13,atol=1e-11,args=(f_p,f_pr,alpha_p,alpha_pr,gr))
     Pp = res.y[0]
     Ppr = res.y[1]
     Gfw = Ppr/Ppr[0]
@@ -54,8 +58,8 @@ def prop_transmissionfiber(L,Nz,Pp0,Ppr0,gr,f_p,f_pr,alpha_p,alpha_pr):
     Sase_bw = nsp*h*f_pr*gr*Gbw[0]*simpson(Pp/Gbw,z)
     return z,Pp,Ppr,Sase_fw,Sase_bw
 
-def prop_EDF(EDFclass,Nz,Pp0,Ppr0,lam_noise_init):
-    z_EDF = np.linspace(0,EDFclass.L,Nz)
+def prop_EDF(EDFclass,L,Nz,Pp0,Ppr0,lam_noise_init):
+    z_EDF = np.linspace(0,L,Nz)
     no_of_modes = 2     # Number of optical modes in the fiber
     Sim_EDF = Erbium_simulation_class(EDFclass,no_of_modes,z_EDF)
     Sim_EDF.add_fw_signal(lam_p,Pp0)
@@ -76,28 +80,17 @@ def prop_EDF(EDFclass,Nz,Pp0,Ppr0,lam_noise_init):
         S_noisebw[:,i] = P_noisebw[:,i]/Sim_EDF.BW_noise[0:Nlamnoise]
     return z_EDF,Pp,Ppr,S_noisefw,S_noisebw
 
-dir_edf = r'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/fiber_data/ofs_edf/'
-file_edf = r'LP980_11841.s'
-
-NP_TO_DB = 4.34
-
-no_of_modes = 2         # Number of optical modes in the fiber
 
 Pp0 = 1.35              # Pump power (W)
 Ppr0 = 200e-3           # Probe power (W)
 lam_p = 1490e-9         # Wavelength (m)
 lam_pr = 1550e-9
-alpha_p_dB = 0.18       # dB/km
-alpha_pr_dB = 0.155     # dB/km
-gr = 0.3*1e-3           # Raman gain (1/W/m)
+
 
 f_p = c/lam_p           # Frequencies (GHz)
 f_pr = c/lam_pr
 
 f_delta = f_p-f_pr      
-
-alpha_p = alpha_p_dB/NP_TO_DB*1e-3      # Loss (1/m)
-alpha_pr = alpha_pr_dB/NP_TO_DB*1e-3
 
 # Brillouin parameters
 Tpulse = 50             # Pulse duration (ns)
@@ -108,8 +101,51 @@ Gamma_b = 2*pi*FWHM_b
 vg = c/1.45             # Group velocity (m/ns)
 g_b = 0.1470            # Brillouin gain factor(1/W/m)
 
+# %% Define fibers
+gamma_raman = 1.72e-14  # Raman gain coefficient (m/W)
+df_raman = f_p-f_pr
 
-# Numerical parameters
+# Sumitomo Z Fiber LL
+alpha_db_p1 = 0.195         # Fiber loss (dB/km)
+alpha_db_pr1 = 0.161
+D_p1 = 13                   # GVD param (ps/(nm*km))
+D_pr1 = 17
+Aeff1 = 85e-12
+Fiber_SumLL = Passivefiber_class(np.array([lam_p,lam_pr]),\
+                           np.array([alpha_db_p1,alpha_db_pr1]),\
+                           np.array([D_p1,D_pr1]),\
+                           np.array([Aeff1,Aeff1]))
+Fiber_SumLL.add_raman(df_raman,gamma_raman/Aeff1)
+    
+# Sumitomo Z-PLUS Fiber ULL
+alpha_db_p1 = 0.180         # Fiber loss (dB/km)
+alpha_db_pr1 = 0.153
+D_p1 = 16                   # GVD param (ps/(nm*km))
+D_pr1 = 20
+Aeff1 = 112e-12
+Fiber_SumULL = Passivefiber_class(np.array([lam_p,lam_pr]),\
+                           np.array([alpha_db_p1,alpha_db_pr1]),\
+                           np.array([D_p1,D_pr1]),\
+                           np.array([Aeff1,Aeff1]))
+Fiber_SumULL.add_raman(df_raman,gamma_raman/Aeff1)
+    
+# Sumitomo Z-PLUS Fiber 150
+alpha_db_p1 = 0.180         # Fiber loss (dB/km)
+alpha_db_pr1 = 0.150
+D_p1 = 17                   # GVD param (ps/(nm*km))
+D_pr1 = 21
+Aeff1 = 150e-12
+Fiber_Sum150 = Passivefiber_class(np.array([lam_p,lam_pr]),\
+                           np.array([alpha_db_p1,alpha_db_pr1]),\
+                           np.array([D_p1,D_pr1]),\
+                           np.array([Aeff1,Aeff1]))
+Fiber_Sum150.add_raman(df_raman,gamma_raman/Aeff1)
+
+dir_edf = r'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/fiber_data/ofs_edf/'
+file_edf = r'LP980_11841.s'
+EDF = Erbiumfiber_class.from_ofs_files(dir_edf, file_edf)
+
+# %% Numerical parameters
 
 Nlamnoise = 51
 lam_noise_init = np.linspace(1500,1600,Nlamnoise+1)*1e-9
@@ -122,7 +158,7 @@ idx_noise = np.argmin(np.abs(lam_noise-lam_pr))
 
 Nz = 501
 
-# Fiber lengths (m)
+# %% Fiber section parameters
 L0 = 100e3
 L_co = [1]
 L_edf = [10]
@@ -130,61 +166,58 @@ L_fib =  [150e3]
 C = [1]
 
 L_fib[-1] = 300e3-(L0+np.sum(L_co)+np.sum(L_edf)+np.sum(L_fib[0:-1]))
-
 L_tot = L0+np.sum(L_co)+np.sum(L_edf)+np.sum(L_fib)
 
-Nsec = len(L_co)
+Fiber_fib0 = Fiber_Sum150
+Fiber_pd0 = Fiber_Sum150
 
-X_guess = np.array([L0]+L_edf)
-#minimize(err_func,)
+Fiber_co = [Fiber_SumULL]
+Fiber_fib = [Fiber_SumULL]
+Fiber_pd = [Fiber_SumULL]
 
-
-# 0: Lead in fiber transmission
+# %% Numerical propagation
 Ppmean0 = 1e-6
 
-z_fib,Pp_fib,Ppr_fib,Snoisefw_fib,Snoisebw_fib = prop_transmissionfiber(L0,Nz,0*Ppmean0,Ppr0,gr,f_p,f_pr,alpha_p,alpha_pr)
-Pp_pdf_fib = Pp0*exp(-alpha_p*z_fib)
+z_fib,Pp_fib,Ppr_fib,Snoisefw_fib,Snoisebw_fib = prop_transmissionfiber(L0,Nz,0*Ppmean0,Ppr0,Fiber_fib0)
+Pp_pdf_fib = Pp0*exp(-Fiber_pd0.alpha[0]*z_fib)
 
 z = z_fib
 Pp = Pp_fib
 Ppr = Ppr_fib
-Ppmean = Ppmean0*exp(-alpha_p*z_fib)
+Ppmean = Ppmean0*exp(-Fiber_fib0.alpha[0]*z_fib)
 Pp_pdf = Pp_pdf_fib
 Snoisebw = [Snoisefw_fib]
 Snoisefw = [Snoisebw_fib]
 Gsmall = [Ppr_fib[-1]/Ppr_fib[0]]
 
-# To be done: Create fiber classes
-# test!!!
-
+Nsec = len(L_co)
 for i in range(0,Nsec):
     #2: Co-transmission
     
     Pp_start = Pp_pdf_fib[-1]*C[i]+Pp_fib[-1]*(1-C[i])
     Ppr_start = Ppr_fib[-1]
-    z_co,Pp_co,Ppr_co,Snoisefw_co,Snoisebw_co = prop_transmissionfiber(L_co[i],Nz,Pp_start,Ppr_start,gr,f_p,f_pr,alpha_p,alpha_pr)
-    Ppmean_co = Pp_start*exp(-alpha_p*z_co)
-    Pp_pdf_co = Pp_pdf_fib[-1]*(1-C[i])*exp(-alpha_p*z_co)
+    z_co,Pp_co,Ppr_co,Snoisefw_co,Snoisebw_co = prop_transmissionfiber(L_co[i],Nz,Pp_start,Ppr_start,Fiber_co[i])
+    Ppmean_co = Pp_start*exp(-Fiber_co[i].alpha[0]*z_co)
+    Pp_pdf_co = Pp_pdf_fib[-1]*(1-C[i])*exp(-Fiber_pd[i].alpha[0]*z_co)
     Snoisefw.append(Snoisefw_co)
     Snoisebw.append(Snoisebw_co)
     Gsmall.append(Ppr_co[-1]/Ppr_co[0])
     
     #3: EDF fiber section
-    EDF = Erbiumfiber_class.from_ofs_files(dir_edf, file_edf, L_edf[i])
-    z_edf,Ppmean_edf,Pprmean_edf,Pnoisefw_edf,Pnoisebw_edf = prop_EDF(EDF,Nz,Ppmean_co[-1],1e-6,lam_noise_init)
+    z_edf,Ppmean_edf,Pprmean_edf,Pnoisefw_edf,Pnoisebw_edf = prop_EDF(EDF,L_edf[i],Nz,Ppmean_co[-1],1e-6,lam_noise_init)
     Gp_edf = Ppmean_edf/Ppmean_edf[0]
     Gpr_edf = Pprmean_edf/Pprmean_edf[0]
     Pp_edf = Pp_co[-1]*Gp_edf
     Ppr_edf = Ppr_co[-1]*Gpr_edf
-    Pp_pdf_edf = Pp_pdf_co[-1]*exp(-alpha_p*z_edf)
+    Pp_pdf_edf = Pp_pdf_co[-1]*exp(-Fiber_co[i].alpha[0]*z_edf)
     Snoisebw.append(Pnoisebw_edf[idx_noise,0])
     Snoisefw.append(Pnoisefw_edf[idx_noise,-1])
     Gsmall.append(Gpr_edf[-1])
     
     #4: Transmission fiber section 
-    z_fib,Pp_fib,Ppr_fib,Snoisefw_fib,Snoisebw_fib = prop_transmissionfiber(L_fib[i],Nz,Pp_edf[-1],Ppr_edf[-1],gr,f_p,f_pr,alpha_p,alpha_pr)
-    Ppmean_fib = Ppmean_edf[-1]*exp(-alpha_p*z_fib)
-    Pp_pdf_fib = Pp_pdf_edf[-1]*exp(-alpha_p*z_fib)
+    z_fib,Pp_fib,Ppr_fib,Snoisefw_fib,Snoisebw_fib = prop_transmissionfiber(L_fib[i],Nz,Pp_edf[-1],Ppr_edf[-1],Fiber_fib[i])
+    Ppmean_fib = Ppmean_edf[-1]*exp(-Fiber_fib[i].alpha[0]*z_fib)
+    Pp_pdf_fib = Pp_pdf_edf[-1]*exp(-Fiber_pd[i].alpha[0]*z_fib)
     Snoisefw.append(Snoisefw_fib)
     Snoisebw.append(Snoisebw_fib)
     Gsmall.append(Ppr_fib[-1]/Ppr_fib[0])
@@ -199,7 +232,7 @@ for i in range(0,Nsec):
     Pp_pdf = np.concatenate([Pp_pdf,Pp_pdf_co,Pp_pdf_edf,Pp_pdf_fib])
 
 
-# Post processing
+# %% Post processing
 Gacc = 1
 Snoisebw_total = Snoisebw[0]*Gacc
 for i in range(0,len(Gsmall)-1):

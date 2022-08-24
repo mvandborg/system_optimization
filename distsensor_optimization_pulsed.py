@@ -4,7 +4,8 @@ Created on Mon Jun 20 16:40:10 2022
 
 @author: madshv
 """
-
+import sys
+sys.path.insert(0, 'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/code')
 import numpy as np
 from scipy.constants import c,h
 from numpy import pi,exp,sqrt,log10
@@ -14,12 +15,11 @@ from scipy.interpolate import splrep,splev
 from scipy.optimize import fsolve
 from scipy.signal import peak_widths,find_peaks
 import matplotlib.pyplot as plt
-from erbium_model.fiberdata_erbium import Erbiumfiber_class
-from erbium_model.simulation_erbium import Erbium_simulation_class
-from passive_fiber_model.fiberdata_passive import Passivefiber_class
-
-def dbm(P):
-    return 10*log10(P*1e3)
+from erbium_model.src.fiberdata_erbium import Erbiumfiber_class
+from erbium_model.src.simulation_erbium import Erbium_simulation_class
+from src.fiberdata_passive import Passivefiber_class
+from help_functions import dbm
+c = c*1e-9              # Unit m/ns
 
 def Apr0_func(t,T0pr,Ppr0):
     zeta = t-T0pr
@@ -101,10 +101,10 @@ def NonlinOperator(z,BF,D,gr,gamma,fr,N):
     dBF = np.concatenate([fft(NAp),fft(NApr)])*exp(-D*z)
     return dBF
 
-def prop_EDF(EDFclass,Nz,Pp0,Ppr0):
+def prop_EDF(EDFclass,Nz,Pp0,Ppr0,L):
     FORWARD = 1
     BACKWARD = -1
-    z_EDF = np.linspace(0,EDFclass.L,Nz)
+    z_EDF = np.linspace(0,L,Nz)
     no_of_modes = 2     # Number of optical modes in the fiber
     Sim_EDF = Erbium_simulation_class(EDF,no_of_modes,z_EDF)
     Sim_EDF.add_signal(lam_p,Pp0,FORWARD)
@@ -114,12 +114,7 @@ def prop_EDF(EDFclass,Nz,Pp0,Ppr0):
     Ppr = res[1]
     return z_EDF*1e-3,Pp,Ppr
 
-dir_edf = r'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/fiber_data/ofs_edf/'
-file_edf = r'LP980_11841.s'
-
 # Physical parameters
-c = c*1e-9              # Unit m/ns
-
 Pp0 = 1.375             # CW pump power (W)
 Ppr0 = 0.195            # Probe peak power (W)
 
@@ -130,14 +125,13 @@ lam_pr = 1550e-9
 f_p = c/lam_p           # Frequency (GHz)
 f_pr = c/lam_pr
 
-df_raman = f_p-f_pr
-
 omega_p = 2*pi*f_p      # Angular frequency rad*GHz
 omega_pr = 2*pi*f_pr
 
-gamma_raman = 1.72e-14  # Raman gain coefficient (m/W)
 
 # Define fiber parameters
+gamma_raman = 1.72e-14  # Raman gain coefficient (m/W)
+df_raman = f_p-f_pr
 
 # Sumitomo Z Fiber LL
 alpha_db_p1 = 0.195         # Fiber loss (dB/km)
@@ -175,6 +169,9 @@ Fiber_Sum150 = Passivefiber_class(np.array([lam_p,lam_pr]),\
                            np.array([Aeff1,Aeff1]))
 Fiber_Sum150.add_raman(df_raman,gamma_raman/Aeff1)
 
+dir_edf = r'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/fiber_data/ofs_edf/'
+file_edf = r'LP980_11841.s'
+EDF = Erbiumfiber_class.from_ofs_files(dir_edf, file_edf)
 
 # Define propagation fibers
 L0 = 20e3
@@ -255,8 +252,8 @@ for i in range(0,Nsec):
     # Section of erbium
     Pp_cw_edf = np.max(np.abs(Ap_co[:,-1])**2)
     Ppr_cw_edf = np.max(np.abs(Apr_co[:,-1])**2)
-    EDF = Erbiumfiber_class.from_ofs_files(dir_edf, file_edf, L_edf[i])
-    z_edf,Pp_edf,Ppr_edf = prop_EDF(EDF,Nz_save,Pp_cw_edf,Ppr_cw_edf)
+    
+    z_edf,Pp_edf,Ppr_edf = prop_EDF(EDF,Nz_save,Pp_cw_edf,Ppr_cw_edf,L_edf[i])
     Gpr_edf = Ppr_edf/Ppr_edf[0]
     Gp_edf = Pp_edf/Pp_edf[0]
     Ap_edf = Ap_co[:,-1]*sqrt(Gp_edf[-1])
