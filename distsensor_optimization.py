@@ -25,13 +25,13 @@ from physical_parameters import *
 
 # %% Fiber section parameters
 Pp0 = 1.35              # Pump power (W)
-Ppr0 = 0.062           # Probe power (W)
+Ppr0 = 0.200           # Probe power (W)
 
-L0 = 120e3
-L_co = [1]
-L_edf = [17]
-L_fib =  [150e3]
-C = [1]
+L0 = 122e3
+L_co = [1,1]
+L_edf = [7.45,6.29]
+L_fib =  [10.5e3,150e3]
+C = [0.66,0.40]
 
 L_fib[-1] = 300e3-(L0+np.sum(L_co)+np.sum(L_edf)+np.sum(L_fib[0:-1]))
 L_tot = L0+np.sum(L_co)+np.sum(L_edf)+np.sum(L_fib)
@@ -39,10 +39,10 @@ L_tot = L0+np.sum(L_co)+np.sum(L_edf)+np.sum(L_fib)
 Fiber_fib0 = Fiber_Sum150
 Fiber_pd0 = Fiber_Sum150
 
-Fiber_co = [Fiber_SumULL]
-Fiber_edf = [Fiber_edf]
-Fiber_fib = [Fiber_SumULL]
-Fiber_pd = [Fiber_SumULL]
+Fiber_co = [Fiber_SumULL,Fiber_SumULL]
+Fiber_edf = [Fiber_edf,Fiber_edf]
+Fiber_fib = [Fiber_SumULL,Fiber_SumULL]
+Fiber_pd = [Fiber_SumULL,Fiber_SumULL]
 
 # %% Simulation
 Nlamnoise = 16
@@ -52,8 +52,9 @@ Nz = 501
 
 Sim = System_simulation_class(lam_p,lam_pr,Ppr0,Pp0,L0,Fiber_fib0,Fiber_pd0,Nz,\
                               Tpulse,T,f_b,FWHM_b,ng,g_b)
-Sim.add_section(L_co[0],L_edf[0],L_fib[0],Fiber_co[0],\
-                Fiber_edf[0],Fiber_fib[0],Fiber_pd[0],C[0])
+for i in range(0,len(L_co)):
+    Sim.add_section(L_co[i],L_edf[i],L_fib[i],Fiber_co[i],\
+                    Fiber_edf[i],Fiber_fib[i],Fiber_pd[i],C[i])
 Sim.add_noise(lamnoise_min,lamnoise_max,Nlamnoise)
 
 Res = Sim.run()

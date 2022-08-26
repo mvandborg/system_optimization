@@ -24,13 +24,14 @@ from physical_parameters import *
 
 # %% Fiber section parameters
 Pp0 = 1.35              # Pump power (W)
-Ppr0 = 0.062           # Probe power (W)
+Ppr0 = 0.2           # Probe power (W)
 
+Nsec = 2
 L0 = 150e3
-L_co = [1]
-L_edf = [9]
-L_fib =  [150e3]
-C = [1]
+L_co = [1,1]
+L_edf = [5,5]
+L_fib =  [50e3,150e5]
+C = [1,1]
 
 L_fib[-1] = 300e3-(L0+np.sum(L_co)+np.sum(L_edf)+np.sum(L_fib[0:-1]))
 L_tot = L0+np.sum(L_co)+np.sum(L_edf)+np.sum(L_fib)
@@ -38,10 +39,10 @@ L_tot = L0+np.sum(L_co)+np.sum(L_edf)+np.sum(L_fib)
 Fiber_fib0 = Fiber_Sum150
 Fiber_pd0 = Fiber_Sum150
 
-Fiber_co = [Fiber_SumULL]
-Fiber_edf = [Fiber_edf]
-Fiber_fib = [Fiber_SumULL]
-Fiber_pd = [Fiber_SumULL]
+Fiber_co = [Fiber_SumULL,Fiber_SumULL]
+Fiber_edf = [Fiber_edf,Fiber_edf]
+Fiber_fib = [Fiber_SumULL,Fiber_SumULL]
+Fiber_pd = [Fiber_SumULL,Fiber_SumULL]
 
 Nlamnoise = 7
 lamnoise_min = 1530*1e-9
@@ -49,35 +50,80 @@ lamnoise_max = 1580*1e-9
 Nz = 501
 
 # %% Optimization algorithm
+Norm_fiber = 1e5
+Norm_edf = 10
 
 def cost_func(X):
-    L0 = X[0]
-    L_edf[0] = X[1]
-    L_fib[-1] = 300e3-(L0+np.sum(L_co)+np.sum(L_edf)+np.sum(L_fib[0:-1]))
-    L_tot = L0+np.sum(L_co)+np.sum(L_edf)+np.sum(L_fib)
+    L0 = X[0]*Norm_fiber
+    L_edf[0] = X[1]*Norm_edf
+    L_edf[1] = X[2]*Norm_edf
+    L_fib[0] = X[3]*Norm_fiber
+    C[0] = X[4]
+    L_fib[Nsec-1] = 300e3-(L0+np.sum(L_co[0:Nsec])+np.sum(L_edf[0:Nsec])+np.sum(L_fib[0:Nsec-1]))
+    L_tot = L0+np.sum(L_co[0:Nsec])+np.sum(L_edf[0:Nsec])+np.sum(L_fib[0:Nsec])
+    print('L0 =',L0,'Ledf =',L_edf[0:Nsec],'Lfib =',L_fib[0:Nsec],'C =',C[0:Nsec])
     
     Sim = System_simulation_class(lam_p,lam_pr,Ppr0,Pp0,L0,Fiber_fib0,Fiber_pd0,Nz,\
                                   Tpulse,T,f_b,FWHM_b,ng,g_b)
-    Sim.add_section(L_co,L_edf[0],L_fib[0],Fiber_co[0],\
-                    Fiber_edf[0],Fiber_fib[0],Fiber_pd[0],C[0])
+    for i in range(0,Nsec):
+        Sim.add_section(L_co[i],L_edf[i],L_fib[i],Fiber_co[i],\
+                        Fiber_edf[i],Fiber_fib[i],Fiber_pd[i],C[i])
     Sim.add_noise(lamnoise_min,lamnoise_max,Nlamnoise)
     Res = Sim.run()
     SNR = Res.calc_SNR()
+    Pb = Res.calc_brillouin_power()
     Ppr_max = np.max(Res.Ppr)
     
+    err = -Pb[-1]
+    print('Error = ',err)
     # Define penalty
     if Ppr_max>0.2:
-        SNR = SNR/1000
-    print(L0,L_edf[0],SNR)
-    return 1/SNR
+        err = err+1000
+    return err
+
+X_init = [90e3/Norm_fiber,6/Norm_edf,10/Norm_edf,50e3/Norm_fiber,0.3]
+bnds = Bounds([0.1,0.1,0.1,0.1,0],[150e3/Norm_fiber,15/Norm_edf,15/Norm_edf,150e3/Norm_fiber,1])
+Res_minimize = minimize(cost_func,X_init,bounds=bnds,method='Nelder-Mead')
 
 
-X_init = [120e3,10]
-bnds = Bounds([0,0],[290e3,15])
-Res_minimize = minimize(cost_func,X_init,bounds=bnds)
+# %% Parameter sweep
 
+L0_vec = np.linspace(30,150,5)*1e3
+Ledf_vec = np.linspace(2,18,5)
+C_vec = np.linspace(0.1,1,5)
+SNR_mat = np.zeros([len(L0_vec),len(Ledf_vec),len(Ledf_vec),len(L0_vec),len(C_vec)])
 
+Nit = np.product(SNR_mat.shape)
+count = 0
+for i in range(len(L0_vec)):
+    for j in range(len(Ledf_vec)):
+        for k in range(len(Ledf_vec)):
+            for l in range(len(L0_vec)):
+                for m in range(len(C_vec)):
+                    X_init = [L0_vec[i]/Norm_fiber,Ledf_vec[j]/Norm_edf,\
+                              Ledf_vec[k]/Norm_edf,L0_vec[l]/Norm_fiber,\
+                              C_vec[m]]
+                    SNR_mat[i,j,k,l,m] = -cost_func(X_init)
+                    count += 1
+                    print(count/Nit*100)
+SNR_mat[SNR_mat<0] = 0
 
+# %% Plotting
+
+idx_max = np.unravel_index(SNR_mat.argmax(),SNR_mat.shape)
+idx_max_mat = np.unravel_index(np.argsort(SNR_mat.ravel()),SNR_mat.shape)
+
+SNR_vec = SNR_mat.flatten()
+SNR_vec_sorted = np.sort(SNR_vec)
+
+plt.close('all')
+fig0,ax0=plt.subplots(constrained_layout=True)
+ax0.plot(SNR_vec_sorted)
+
+for i in range(0,30):
+    print(L0_vec[idx_max_mat[0][-1-i]],Ledf_vec[idx_max_mat[1][-1-i]],\
+          Ledf_vec[idx_max_mat[2][-1-i]],L0_vec[idx_max_mat[3][-1-i]],\
+          C_vec[idx_max_mat[4][-1-i]])
 
 
 
