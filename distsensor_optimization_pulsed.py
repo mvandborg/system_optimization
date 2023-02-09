@@ -4,8 +4,15 @@ Created on Mon Jun 20 16:40:10 2022
 
 @author: madshv
 """
+
 import sys
+import os
+file_dir = os.path.dirname(__file__)
+sys.path.append(file_dir)
+
+# Insert directory of your current folder
 sys.path.insert(0, 'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/code')
+
 import numpy as np
 from scipy.constants import c,h
 from numpy import pi,exp,sqrt,log10
@@ -22,12 +29,21 @@ from help_functions import dbm
 c = c*1e-9              # Unit m/ns
 
 def Apr0_func(t,T0pr,Ppr0):
-    zeta = t-T0pr
-    H0 = zeta>=-T0pr/2
-    H1 = zeta<=T0pr/2
+    H0 = t>=-T0pr/2
+    H1 = t<=T0pr/2
+    
+    DT = T0pr/30
+    H0n = t<=-(T0pr-DT)/2
+    H0p = t>=-(T0pr+DT)/2
+    H1n = t>=+(T0pr-DT)/2
+    H1p = t<=+(T0pr+DT)/2
+    H00 = t>=-(T0pr+DT)/2
+    H01 = t<=+(T0pr-DT)/2
+    
     #return z**0*t**0*sqrt(Ppr0)
-    #return sqrt(Ppr0)*H0*H1
-    return sqrt(Ppr0)*exp(-1/2*(t/T0pr)**14)
+    #return sqrt(Ppr0)*(H00*H01+H1n*H1p*(-1/DT*(t-(T0pr+DT)/2))+H0n*H0p*(1/DT*(t+(T0pr-DT)/2)))
+
+    return sqrt(Ppr0)*exp(-(2*t/T0pr)**22)
 
 
 def gnls(T,W,A0,L,Fiber,Nz,nsaves):
@@ -115,11 +131,11 @@ def prop_EDF(EDFclass,Nz,Pp0,Ppr0,L):
     return z_EDF*1e-3,Pp,Ppr
 
 # Physical parameters
-Pp0 = 1.375             # CW pump power (W)
-Ppr0 = 0.062            # Probe peak power (W)
+Pp0 = 0.1             # CW pump power (W)
+Ppr0 = 0.200            # Probe peak power (W)
 
-T0pr = 75               # Probe duration (ns)
-lam_p = 1480e-9         # Wavelength (m)
+T0pr = 25               # Probe duration (ns)
+lam_p = 1450e-9         # Wavelength (m)
 lam_pr = 1550e-9        
 
 f_p = c/lam_p           # Frequency (GHz)
@@ -130,7 +146,7 @@ omega_pr = 2*pi*f_pr
 
 
 # Define fiber parameters
-gamma_raman = 1.72e-14  # Raman gain coefficient (m/W)
+gamma_raman = 1.72e-14#1.72e-14  # Raman gain coefficient (m/W)
 df_raman = f_p-f_pr
 
 # Sumitomo Z Fiber LL
@@ -170,16 +186,17 @@ Fiber_Sum150 = Passivefiber_class(np.array([lam_p,lam_pr]),\
 Fiber_Sum150.add_raman(df_raman,gamma_raman/Aeff1)
 
 dir_edf = r'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/fiber_data/ofs_edf/'
-file_edf = r'LP980_11841.s'
+file_edf = r'LP980_22841_labversion.s'
+#LP980_11841 
 EDF = Erbiumfiber_class.from_ofs_files(dir_edf, file_edf)
 
 # Define propagation fibers
-L0 = 100e3
+L0 = 50e3
 
 L_co = [1]
-L_edf = [12]
-L_fib = [150e3]
-C = [1.00]    # Coupling factor
+L_edf = [11.5]
+L_fib = [70e3]
+C = [1]    # Coupling factor
 
 Fiber_fib0 = Fiber_Sum150
 Fiber_pd0 = Fiber_Sum150
@@ -193,9 +210,9 @@ Nsec = len(L_co)
 
 # Numerical parameters
 
-Tmax = T0pr*15          # Simulation window size (ns)
+Tmax = T0pr*10          # Simulation window size (ns)
 
-N = 2**13
+N = 2**16
 dt = Tmax/N
 fsam = 1/dt         # Sampling frequency (GHz)
 fnyq = fsam/2
@@ -225,7 +242,7 @@ ASDnoise_pr = np.sqrt(ESDnoise_JGHz)*exp(1j*theta_noise_pr)
 Anoise_p = fft(ASDnoise_p)/Tmax
 Anoise_pr = fft(ASDnoise_pr)/Tmax
 
-Ap0 = sqrt(1e-6)*np.ones(N)#+Anoise_p
+Ap0 = sqrt(Pp0)*np.ones(N)#+Anoise_p
 Apr0 = Apr0_func(t,T0pr,Ppr0)#+Anoise_pr
 
 
@@ -322,40 +339,43 @@ PSDpr = np.abs(AFpr)**2
 
 plt.close('all')
 
-idxtstep = 2**6
-Tmaxplot = Tmax#10*T0pr
+idxtstep = 2**1
+Tmaxplot = 7*T0pr
 Ntplot = int(Tmaxplot/dt)
 Z,T = np.meshgrid(z,t[int((N-Ntplot)/2):int((N+Ntplot)/2):idxtstep])
 
-Apr_plot = np.abs(Apr[int((N-Ntplot)/2):int((N+Ntplot)/2):idxtstep])**2
-Ap_plot = np.abs(Ap[int((N-Ntplot)/2):int((N+Ntplot)/2):idxtstep])**2
+Ppr_plot = np.abs(Apr[int((N-Ntplot)/2):int((N+Ntplot)/2):idxtstep])**2
+Pp_plot = np.abs(Ap[int((N-Ntplot)/2):int((N+Ntplot)/2):idxtstep])**2
 fig0,ax0=plt.subplots(1,2,constrained_layout=True)
-im0a = ax0[0].pcolormesh(T,Z*1e-3,Ap_plot)
+im0a = ax0[0].pcolormesh(T,Z*1e-3,Pp_plot*1e3)
 ax0[0].set_xlabel('Time (ns)')
 ax0[0].set_ylabel('Distance (m)')
-im0b = ax0[1].pcolormesh(T,Z*1e-3,Apr_plot)
+im0b = ax0[1].pcolormesh(T,Z*1e-3,Ppr_plot*1e3)
 ax0[1].set_xlabel('Time (ns)')
 ax0[1].set_ylabel('Distance (m)')
 #cbar0a = plt.colorbar(im0a)
 cbar0b = plt.colorbar(im0b)
-cbar0b.set_label('Power (W)')
+cbar0b.set_label('Power (mW)')
+ax0[0].set_title('Pump')
+ax0[1].set_title('Probe')
 
-idxfstep = 2**6
-Fmaxplot = fsam#5000/T0pr
+idxfstep = 2**0
+Fmaxplot = fsam/20 #5000/T0pr
 Nfplot = int(Fmaxplot/df)
 Z,F = np.meshgrid(z,f_sh[int((N-Nfplot)/2):int((N+Nfplot)/2):idxfstep])
 
-AFpr_plot = np.abs(AFpr[int((N-Nfplot)/2):int((N+Nfplot)/2):idxfstep])**2
-AFp_plot = np.abs(AFp[int((N-Nfplot)/2):int((N+Nfplot)/2):idxfstep])**2
+AFpr_plot = dbm(np.abs(AFpr[int((N-Nfplot)/2):int((N+Nfplot)/2):idxfstep])**2)
+AFp_plot = dbm(np.abs(AFp[int((N-Nfplot)/2):int((N+Nfplot)/2):idxfstep])**2)
 fig1,ax1=plt.subplots(1,2,constrained_layout=True)
-ax1[0].pcolormesh(F,Z*1e-3,dbm(AFp_plot))
-ax1[0].set_xlabel('Frequency (GHz)')
+ax1[0].pcolormesh(F*1e3,Z*1e-3,AFp_plot)
+ax1[0].set_xlabel('Frequency (MHz)')
 ax1[0].set_ylabel('Distance (km)')
-im1b = ax1[1].pcolormesh(F,Z*1e-3,dbm(AFpr_plot))
-ax1[1].set_xlabel('Frequency (GHz)')
+im1b = ax1[1].pcolormesh(F*1e3,Z*1e-3,AFpr_plot)
+ax1[1].set_xlabel('Frequency (MHz)')
 ax1[1].set_ylabel('Distance (km)')
 cbar1b = plt.colorbar(im1b)
-cbar1b.set_label('Power (a.u., dB)')
+cbar1b.set_label('Power (dB)')
+im1b.set_clim([np.max(AFp_plot),np.max(AFp_plot)-60])
 
 fig2,ax2 = plt.subplots(2,2,constrained_layout=True)
 ax2[0,0].plot(t,np.abs(Ap[:,0])**2/np.max(np.abs(Ap[:,0])**2),label='z=0')
@@ -390,13 +410,25 @@ ax3.set_xlabel('z (m)')
 ax3.set_ylabel('Power (dBm)')
 ax3.legend()
 
-fig4,ax4 = plt.subplots(constrained_layout=True)
-ax4.plot(f_sh*1e3,Pb_th[:,104]/np.max(Pb_th[:,104]),label='23.6 km')
-ax4.plot(f_sh*1e3,Pb_th[:,142]/np.max(Pb_th[:,142]),label='69.2 km')
-ax4.set_xlim([-80,120])
-ax4.set_xlabel('Frequency (GHz)')
-ax4.set_ylabel('Brillouin scattered power (Normalized)')
-ax4.legend()
+
+fig4,ax4 = plt.subplots(1,2,constrained_layout=True)
+ax4[0].plot(f_sh*1e3,np.abs(AFpr[:,104])**2/np.max(np.abs(AFpr[:,104])**2),label='23.6 km')
+ax4[0].plot(f_sh*1e3,np.abs(AFpr[:,142])**2/np.max(np.abs(AFpr[:,142])**2),label='69.2 km')
+ax4[0].plot(f_sh*1e3,np.abs(AFpr[:,-1])**2/np.max(np.abs(AFpr[:,-1])**2),label='300.0 km')
+ax4[0].plot(f_sh*1e3,gb_th,label=r'$g(f)$',color='black',ls='--')
+ax4[0].set_xlim([-100,100])
+ax4[0].set_xlabel('Frequency (MHz)')
+ax4[0].set_ylabel('Power (Normalized)')
+ax4[0].legend()
+ax4[0].set_title(r'$P_{pr}(f)$')
+ax4[1].plot(f_sh*1e3,Pb_th[:,104]/np.max(Pb_th[:,104]),label='23.6 km')
+ax4[1].plot(f_sh*1e3,Pb_th[:,142]/np.max(Pb_th[:,142]),label='69.2 km')
+ax4[1].plot(f_sh*1e3,Pb_th[:,-1]/np.max(Pb_th[:,-1]),label='300.0 km')
+ax4[1].set_xlim([-80,120])
+ax4[1].set_xlabel('Frequency (MHz)')
+ax4[1].set_ylabel('Power (Normalized)')
+ax4[1].legend()
+ax4[1].set_title(r'$g(f)*P_{pr}(f)$')
 
 fig5,ax5 = plt.subplots(1,2,constrained_layout=True)
 ax5[0].plot(z*1e-3,f_peak*1e3)
@@ -405,4 +437,21 @@ ax5[0].set_xlabel('z (m)')
 ax5[0].set_ylabel('Peak frequency (MHz)')
 ax5[1].set_xlabel('z (m)')
 ax5[1].set_ylabel('Brillouin spectrum width (MHz)')
+
+fig5,ax5 = plt.subplots(constrained_layout=True)
+ax5b = ax5.twinx()
+ax5.plot(z*1e-3,fwidth_peak*1e3,color='tab:blue')
+ax5b.plot(z*1e-3,np.max(np.abs(Apr)**2*1e3,axis=0),label='With pump',color='tab:red')
+ax5.set_xlabel('z (m)')
+ax5.set_ylabel('FWHM width (MHz)',color='tab:blue')
+ax5b.set_ylabel('Power (mW)',color='tab:red')
+ax5.set_ylim([35,55])
+ax5b.set_ylim([0,230])
+ax5.legend()
+
+fig6,ax6 = plt.subplots(constrained_layout=True)
+idx_tnorm = np.argmin(np.abs(t-185))
+ax6.plot(t,np.abs(Apr[:,-1])**2/np.abs(Apr[idx_tnorm,-1])**2)
+ax6.set_xlabel('Time (ns)')
+ax6.set_ylabel('Normalized power')
 

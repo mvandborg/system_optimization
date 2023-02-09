@@ -24,14 +24,14 @@ from src.simulation_system import System_simulation_class
 from physical_parameters import *
 
 # %% Fiber section parameters
-Pp0 = 1.35              # Pump power (W)
-Ppr0 = 0.200           # Probe power (W)
+Pp0 = 0.1              # Pump power (W)
+Ppr0 = 0.2           # Probe power (W)
 
-L0 = 122e3
-L_co = [1,1]
-L_edf = [7.45,6.29]
-L_fib =  [10.5e3,150e3]
-C = [0.66,0.40]
+L0 = 50e3
+L_co = [1]
+L_edf = [11.5]
+L_fib =  [150e3]
+C = [1]
 
 L_fib[-1] = 300e3-(L0+np.sum(L_co)+np.sum(L_edf)+np.sum(L_fib[0:-1]))
 L_tot = L0+np.sum(L_co)+np.sum(L_edf)+np.sum(L_fib)
@@ -66,7 +66,7 @@ SNR = Res.calc_SNR()
 plt.close('all')
 
 fig0,ax0 = plt.subplots()
-ax0.plot(Res.z*1e-3,dbm(Res.Pp),label='Pump pulse power')
+#ax0.plot(Res.z*1e-3,dbm(Res.Pp),label='Pump pulse power')
 ax0.plot(Res.z*1e-3,dbm(Res.Ppmean),label='Pump mean power')
 ax0.plot(Res.z*1e-3,dbm(Res.Ppr),label='Probe power')
 ax0.plot(Res.z*1e-3,dbm(Res.Pp_pdf),label='Pump delivery fiber power')

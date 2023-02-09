@@ -177,7 +177,7 @@ class System_result_class:
     def calc_brillouin_power(self):
         S = self.Sim_class
         Epr = self.Ppr*S.Tpulse        # Pulse energy (nJ)
-        P_b = kB*S.Temp*S.Gamma_b*S.f_pr/(4*S.f_b)*S.g_b*S.vg*Epr#*exp(1/2*g_b*vg*Epr)
+        P_b = kB*S.Temp*S.Gamma_b*S.f_pr/(4*S.f_b)*S.g_b*S.vg*Epr
         return P_b  
         
     def calc_noise_power(self):
