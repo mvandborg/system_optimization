@@ -1,0 +1,7 @@
+
+Splice losses measured by Neethu after optimizations.
+
+Erbium->scuba150: 0.5
+Scuba150->scuba80: 0.1
+SMF->scuba150: 0.3
+SMF->erbium: 0.3

@@ -13,7 +13,7 @@ from erbium_model.src.fiberdata_erbium import Erbiumfiber_class
 c = c*1e-9              # Unit m/ns
 
 # Define physical parameters
-lam_p = 1480e-9         # Wavelength (m)
+lam_p = 1450e-9         # Wavelength (m)
 lam_pr = 1550e-9
 
 f_p = c/lam_p           # Frequencies (GHz)
@@ -26,7 +26,7 @@ Tpulse = 50             # Pulse duration (ns)
 T = 300                 # Temperature (K)
 f_b = 10.8              # Brillouin frequency shift (GHz)
 FWHM_b = 38e-3          # FWHM of Brillouin peak (GHz)
-Gamma_b = 2*pi*FWHM_b
+Gamma_b = 2*pi*FWHM_b   # Decay factor (1/ns)
 ng = 1.45
 vg = c/ng               # Group velocity (m/ns)
 g_b = 0.1470            # Brillouin gain factor(1/W/m)

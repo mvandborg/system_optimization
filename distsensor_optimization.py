@@ -19,19 +19,21 @@ import numpy as np
 import matplotlib.pyplot as plt
 from help_functions import dbm
 from src.simulation_system import System_simulation_class
+from numpy import log10
 
 # Import physical parameters
 from physical_parameters import *
 
 # %% Fiber section parameters
-Pp0 = 0.1              # Pump power (W)
+Pp0 = 2.2              # Pump power (W)
 Ppr0 = 0.2           # Probe power (W)
 
-L0 = 50e3
+L0 = 140e3
 L_co = [1]
-L_edf = [11.5]
-L_fib =  [150e3]
+L_edf = [22.2]
+L_fib =  [160e3]
 C = [1]
+Nsec = len(L_co)
 
 L_fib[-1] = 300e3-(L0+np.sum(L_co)+np.sum(L_edf)+np.sum(L_fib[0:-1]))
 L_tot = L0+np.sum(L_co)+np.sum(L_edf)+np.sum(L_fib)
@@ -46,13 +48,13 @@ Fiber_pd = [Fiber_SumULL,Fiber_SumULL]
 
 # %% Simulation
 Nlamnoise = 16
-lamnoise_min = 1500*1e-9
-lamnoise_max = 1600*1e-9
+lamnoise_min = 1500e-9
+lamnoise_max = 1600e-9
 Nz = 501
 
 Sim = System_simulation_class(lam_p,lam_pr,Ppr0,Pp0,L0,Fiber_fib0,Fiber_pd0,Nz,\
                               Tpulse,T,f_b,FWHM_b,ng,g_b)
-for i in range(0,len(L_co)):
+for i in range(0,Nsec):
     Sim.add_section(L_co[i],L_edf[i],L_fib[i],Fiber_co[i],\
                     Fiber_edf[i],Fiber_fib[i],Fiber_pd[i],C[i])
 Sim.add_noise(lamnoise_min,lamnoise_max,Nlamnoise)

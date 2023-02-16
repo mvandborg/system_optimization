@@ -4,6 +4,7 @@ Created on Mon Jun 20 16:40:10 2022
 
 @author: madshv
 """
+# %%
 
 import sys
 import os
@@ -156,9 +157,9 @@ D_p1 = 13                   # GVD param (ps/(nm*km))
 D_pr1 = 17
 Aeff1 = 85e-12
 Fiber_SumLL = Passivefiber_class(np.array([lam_p,lam_pr]),\
-                           np.array([alpha_db_p1,alpha_db_pr1]),\
-                           np.array([D_p1,D_pr1]),\
-                           np.array([Aeff1,Aeff1]))
+                           alpha_db=np.array([alpha_db_p1,alpha_db_pr1]),\
+                           D=np.array([D_p1,D_pr1]),\
+                           Aeff=np.array([Aeff1,Aeff1]))
 Fiber_SumLL.add_raman(df_raman,gamma_raman/Aeff1)
     
 # Sumitomo Z-PLUS Fiber ULL
@@ -455,3 +456,4 @@ ax6.plot(t,np.abs(Apr[:,-1])**2/np.abs(Apr[idx_tnorm,-1])**2)
 ax6.set_xlabel('Time (ns)')
 ax6.set_ylabel('Normalized power')
 
+plt.show()

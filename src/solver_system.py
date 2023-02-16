@@ -171,21 +171,29 @@ class System_result_class:
         P_b = self.calc_brillouin_power()
         P_b_end = P_b[-1]*self.Gtotal
         Snoisebw_total = self.calc_noise_power()
-        SNR = P_b_end/(Snoisebw_total*self.Sim_class.FWHM_b)
+        sigma2 = 1e-12
+        #SNR = P_b_end/sigma2
+        Pb_ref = 0.2*400e-9*self.scatter_coeff()
+        C1 = 0.57e6 # Inherent signal fluctuation noise (Hz)
+        C2 = 1.26e3*Pb_ref # Shot noise (Hz/W)
+        SNR = C1+C2/P_b
         return SNR
     
+    def scatter_coeff(self):
+        S = self.Sim_class
+        return S.vg*kB*S.Temp*S.Gamma_b*S.f_pr*S.g_b/(8*S.f_b)*1e18
+
     def calc_brillouin_power(self):
         S = self.Sim_class
-        Epr = self.Ppr*S.Tpulse        # Pulse energy (nJ)
-        P_b = kB*S.Temp*S.Gamma_b*S.f_pr/(4*S.f_b)*S.g_b*S.vg*Epr
-        return P_b  
+        Epulse = S.Tpulse*self.Ppr*1e-9  # Pulse energy (J)
+        return self.scatter_coeff()*Epulse 
         
     def calc_noise_power(self):
         Gsmall = self.Gsmall
         Snoisebw = self.Snoisebw
         Gacc = 1
         Snoisebw_total = Snoisebw[0]*Gacc
-        for i in range(0,len(Gsmall)-1):
+        for i in range(len(Gsmall)-1):
             Gacc = Gacc*Gsmall[i]
             Snoisebw_total = Snoisebw_total+Snoisebw[i+1]*Gacc
         return Snoisebw_total
