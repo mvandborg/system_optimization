@@ -131,21 +131,23 @@ class System_solver_class:
         Sase_fw = nsp*h*f_pr*gr*Gfw[-1]*simpson(Pp/Gfw,z)
         Sase_bw = nsp*h*f_pr*gr*Gbw[0]*simpson(Pp/Gbw,z)
         return z,Pp,Ppr,Sase_fw,Sase_bw
-    
+
     def prop_EDF(self,EDFclass,L,Nz,Pp0,Ppr0,lam_noise_init):
         z_EDF = np.linspace(0,L,Nz)
-        Sim_EDF = Erbium_simulation_class(EDFclass,self.no_of_modes,z_EDF)
+        Sim_EDF = Erbium_simulation_class(EDFclass,z_EDF)
         Sim_EDF.add_fw_signal(self.lam_p,Pp0)
         Sim_EDF.add_fw_signal(self.lam_pr,Ppr0)
-        Sim_EDF.add_noise(lam_noise_init)
-        res,_ = Sim_EDF.run()
-        z_EDF = res.x
-        Pp = res.y[0]
-        Ppr = res.y[1]
+        Sim_EDF.add_noise(np.min(lam_noise_init),
+                          np.max(lam_noise_init),
+                          len(lam_noise_init))
+        Res = Sim_EDF.run()
+        z_EDF = Res.z
+        Pp = Res.Psignal[0]
+        Ppr = Res.Psignal[1]
         
-        Nlamnoise = len(lam_noise_init)-1
-        P_noisefw = res.y[2:2+int(Nlamnoise)]
-        P_noisebw = res.y[2+int(Nlamnoise):]
+        P_noisefw = Res.Pnoise_fw
+        P_noisebw = Res.Pnoise_bw
+        Nlamnoise = len(P_noisefw)
         S_noisefw = np.zeros(P_noisefw.shape)
         S_noisebw = np.zeros(P_noisebw.shape)
         for i in range(0,len(z_EDF)):
@@ -171,11 +173,10 @@ class System_result_class:
         P_b = self.calc_brillouin_power()
         P_b_end = P_b[-1]*self.Gtotal
         Snoisebw_total = self.calc_noise_power()
-        sigma2 = 1e-12
-        #SNR = P_b_end/sigma2
         Pb_ref = 0.2*400e-9*self.scatter_coeff()
-        C1 = 0.57e6 # Inherent signal fluctuation noise (Hz)
-        C2 = 1.26e3*Pb_ref # Shot noise (Hz/W)
+        C1 = 0.38e6 # Inherent signal fluctuation noise (Hz)
+        C2 = 0.19e3*Pb_ref # Shot noise (Hz/W)
+        C3 = 1.26e3*Pb_ref # Shot noise (Hz/W)
         SNR = C1+C2/P_b
         return SNR
     

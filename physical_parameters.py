@@ -13,7 +13,7 @@ from erbium_model.src.fiberdata_erbium import Erbiumfiber_class
 c = c*1e-9              # Unit m/ns
 
 # Define physical parameters
-lam_p = 1450e-9         # Wavelength (m)
+lam_p = 1455e-9         # Wavelength (m)
 lam_pr = 1550e-9
 
 f_p = c/lam_p           # Frequencies (GHz)

@@ -26,7 +26,7 @@ import matplotlib.pyplot as plt
 from erbium_model.src.fiberdata_erbium import Erbiumfiber_class
 from erbium_model.src.simulation_erbium import Erbium_simulation_class
 from src.fiberdata_passive import Passivefiber_class
-from help_functions import dbm
+from help_functions import dbm,inv_dbm
 c = c*1e-9              # Unit m/ns
 
 def Apr0_func(t,T0pr,Ppr0):
@@ -51,7 +51,7 @@ def gnls(T,W,A0,L,Fiber,Nz,nsaves):
     # Propagates the input pulse A0 using the GNLS split step method.
     # OUTPUT VARIABLES
     # z: List of z-coordinates
-    # As: Saved time domain field at distances z
+    # As: Saved time domain field a t distances z
     # INPUT VARIABLES
     # T: Time list
     # W: List of angular frequencies
@@ -118,25 +118,28 @@ def NonlinOperator(z,BF,D,gr,gamma,fr,N):
     dBF = np.concatenate([fft(NAp),fft(NApr)])*exp(-D*z)
     return dBF
 
-def prop_EDF(EDFclass,Nz,Pp0,Ppr0,L):
-    FORWARD = 1
-    BACKWARD = -1
+def prop_EDF(EDFclass,Nz,Pp0,Ppr0,lam_p,lam_pr,L):
     z_EDF = np.linspace(0,L,Nz)
     no_of_modes = 2     # Number of optical modes in the fiber
-    Sim_EDF = Erbium_simulation_class(EDF,no_of_modes,z_EDF)
-    Sim_EDF.add_signal(lam_p,Pp0,FORWARD)
-    Sim_EDF.add_signal(lam_pr,Ppr0,FORWARD)
-    res = Sim_EDF.runan()
-    Pp = res[0]
-    Ppr = res[1]
+    Nlamnoise = 21
+    lamnoise_min = 1500*1e-9
+    lamnoise_max = 1590*1e-9
+    Sim_EDF = Erbium_simulation_class(EDF,z_EDF)
+    Sim_EDF.add_fw_signal(lam_p,Pp0)
+    Sim_EDF.add_fw_signal(lam_pr,Ppr0)
+    Sim_EDF.add_noise(lamnoise_min,lamnoise_max,Nlamnoise)
+    Res = Sim_EDF.run()
+    z_EDF = Res.z
+    Pp = Res.Psignal[0]
+    Ppr = Res.Psignal[1]
     return z_EDF*1e-3,Pp,Ppr
 
 # Physical parameters
-Pp0 = 0.1             # CW pump power (W)
-Ppr0 = 0.200            # Probe peak power (W)
+Pp0 = 300e-3             # CW pump power (W)
+Ppr0 = 20e-3            # Probe peak power (W)
 
 T0pr = 25               # Probe duration (ns)
-lam_p = 1450e-9         # Wavelength (m)
+lam_p = 1455e-9         # Wavelength (m)
 lam_pr = 1550e-9        
 
 f_p = c/lam_p           # Frequency (GHz)
@@ -144,7 +147,6 @@ f_pr = c/lam_pr
 
 omega_p = 2*pi*f_p      # Angular frequency rad*GHz
 omega_pr = 2*pi*f_pr
-
 
 # Define fiber parameters
 gamma_raman = 1.72e-14#1.72e-14  # Raman gain coefficient (m/W)
@@ -192,15 +194,15 @@ file_edf = r'LP980_22841_labversion.s'
 EDF = Erbiumfiber_class.from_ofs_files(dir_edf, file_edf)
 
 # Define propagation fibers
-L0 = 50e3
+L0 = 0.001
 
-L_co = [1]
-L_edf = [11.5]
-L_fib = [70e3]
+L_co = [150e3]
+L_edf = [0.1]
+L_fib = [0.1]
 C = [1]    # Coupling factor
 
-Fiber_fib0 = Fiber_Sum150
-Fiber_pd0 = Fiber_Sum150
+Fiber_fib0 = Fiber_SumULL
+Fiber_pd0 = Fiber_SumULL
 
 Fiber_co = [Fiber_SumULL]
 Fiber_fib = [Fiber_SumULL]
@@ -213,7 +215,7 @@ Nsec = len(L_co)
 
 Tmax = T0pr*10          # Simulation window size (ns)
 
-N = 2**16
+N = 2**13
 dt = Tmax/N
 fsam = 1/dt         # Sampling frequency (GHz)
 fnyq = fsam/2
@@ -271,7 +273,8 @@ for i in range(0,Nsec):
     Pp_cw_edf = np.max(np.abs(Ap_co[:,-1])**2)
     Ppr_cw_edf = np.max(np.abs(Apr_co[:,-1])**2)
     
-    z_edf,Pp_edf,Ppr_edf = prop_EDF(EDF,Nz_save,Pp_cw_edf,Ppr_cw_edf,L_edf[i])
+    print('Pump power before edf:',Pp_cw_edf)
+    z_edf,Pp_edf,Ppr_edf = prop_EDF(EDF,Nz_save,Pp_cw_edf,Ppr_cw_edf,lam_p,lam_pr,L_edf[i])
     Gpr_edf = Ppr_edf/Ppr_edf[0]
     Gp_edf = Pp_edf/Pp_edf[0]
     Ap_edf = Ap_co[:,-1]*sqrt(Gp_edf[-1])
@@ -295,8 +298,8 @@ for i in range(0,Nsec):
 
 # %% Post processing
 
-AFp = ifftshift(ifft(Ap,axis=0),axes=0)*Tmax        # Normalized such that |AF|^2=ESD and sum(|AF|^2)*df=sum(|A|^2)*dt
-AFpr = ifftshift(ifft(Apr,axis=0),axes=0)*Tmax
+AFp = fftshift(fft(Ap,axis=0),axes=0)*Tmax        # Normalized such that |AF|^2=ESD and sum(|AF|^2)*df=sum(|A|^2)*dt
+AFpr = fftshift(fft(Apr,axis=0),axes=0)*Tmax
 
 # Brillouin spectrum
 dnu = 38e-3     # Spectral FWHM width (GHz)
@@ -323,15 +326,12 @@ for i in range(Pb_th.shape[1]):
 # %% Save data
 issave = 0
 
-filedir = r'C:\Users\madshv\OneDrive - Danmarks Tekniske Universitet\code\longdistance_optimization\singleedfa_100km'
-filename = r'T0pr50ns.npz'
+filedir = r'C:\Users\madshv\OneDrive - Danmarks Tekniske Universitet\code\data\brillouin_raman_simulation'
+filename = r'test_sim.npz'
 
 if issave==1:
     np.savez_compressed(filedir+'/'+filename,z=z,t=t,f=f,Apr=Apr,Ap=Ap,\
-                        Tmax=Tmax,N=N,fsam=fsam,gr=gr,gamma=gamma,fr=fr,\
-                        alpha=alpha,beta2=beta2,dbeta1=dbeta1,D=D,\
-                        Gain_edfa_p=Gp_edf,Gain_edfa_pr=Gpr_edf,\
-                        Aeff=Aeff)
+                        Tmax=Tmax,N=N,fsam=fsam)
 
 
 # %% Plotting
@@ -457,3 +457,4 @@ ax6.set_xlabel('Time (ns)')
 ax6.set_ylabel('Normalized power')
 
 plt.show()
+# %%

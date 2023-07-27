@@ -5,8 +5,6 @@ Created on Mon Jun 13 15:45:34 2022
 @author: madshv
 """
 
-# HEJ
-
 from IPython import get_ipython
 get_ipython().magic('reset -sf')
 import os

@@ -16,7 +16,7 @@ sys.path.insert(0, 'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/cod
 
 import numpy as np
 import matplotlib.pyplot as plt
-from help_functions import dbm
+from help_functions import dbm,inv_dbm
 from scipy.optimize import minimize,Bounds
 from src.simulation_system import System_simulation_class
 
@@ -24,15 +24,15 @@ from src.simulation_system import System_simulation_class
 from physical_parameters import *
 
 # %% Fiber section parameters
-Pp0 = 2.2            # Pump power (W)
-Ppr0 = 0.2           # Probe power (W)
+Pp0 = inv_dbm(34)        # Pump power (W)
+Ppr0 = 0.2              # Probe power (W)
 
-Nsec = 1
-L0 = 140e3
+Nsec = 2
+L0 = 80e3
 L_co = [1,1]
-L_edf = [15,5]
-L_fib =  [140e3,100e3]
-C = [1,1]
+L_edf = [8,8]
+L_fib =  [50e3,100e3]
+C = [0.1,1]
 
 L_fib[-1] = 300e3-(L0+np.sum(L_co)+np.sum(L_edf)+np.sum(L_fib[0:-1]))
 L_tot = L0+np.sum(L_co)+np.sum(L_edf)+np.sum(L_fib)
@@ -54,9 +54,11 @@ Nz = 501
 Norm_fiber = 1e5
 Norm_edf = 10
 def cost_func(X):
-    #L_fib[0] = X[0]*Norm_fiber
-    L_edf[0] = X[0]*Norm_edf  
-    #C[0] = X[2]
+    L0 = X[0]*Norm_fiber
+    L_fib[0] = X[1]*Norm_fiber
+    L_edf[0] = X[2]*Norm_edf 
+    L_edf[1] = X[3]*Norm_edf  
+    #C[0] = X[4]
     
     L_fib[Nsec-1] = 300e3-(L0+np.sum(L_co[0:Nsec])+np.sum(L_edf[0:Nsec])+np.sum(L_fib[0:Nsec-1]))
     L_tot = L0+np.sum(L_co[0:Nsec])+np.sum(L_edf[0:Nsec])+np.sum(L_fib[0:Nsec])
@@ -78,13 +80,12 @@ def cost_func(X):
     err = SNR[-1]
     # Define penalty
     if Ppr_max>0.23:
-        err = 1000
+        err = err*1000
     print('Error = ',err)
     return err
 #100e3/Norm_fiber,100e3/Norm_fiber
-X_init = [12/Norm_edf,1]#[100e3/Norm_fiber,15/Norm_edf,1]
-bnds = Bounds([0.01,0],[25e3/Norm_edf,1])
-#bnds = Bounds([0.01,0.01,0],[200e3/Norm_fiber,25e3/Norm_edf,1])
+X_init = [60e3/Norm_fiber,60e3/Norm_fiber,2/Norm_edf,5/Norm_edf,0.1]
+bnds = Bounds([0.1,0.1,0.1,0.1,0],[200e3/Norm_fiber,200e3/Norm_fiber,30/Norm_edf,30/Norm_edf,1])
 Res_minimize = minimize(cost_func,X_init,bounds=bnds,method='Nelder-Mead')
 
 # %%
