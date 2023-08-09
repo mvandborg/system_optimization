@@ -174,8 +174,10 @@ class Simulation_pulsed_sections_fiber(Simulation_pulsed_single_fiber):
         z1,A1 = gnls1(self.t,self.omega,self.A0,self.L,self.Fiber,self.Nz_save)
         Atot = A1
         ztot = z1
+        G = np.exp(self.Fiber.alpha[1]*self.L)
         for i in range(1,self.Nsec):
-            z1,A1 = gnls1(self.t,self.omega,self.A0,self.L,self.Fiber,self.Nz_save)
+            A0_new = np.sqrt(G)*A1[:,-1]
+            z1,A1 = gnls1(self.t,self.omega,A0_new,self.L,self.Fiber,self.Nz_save)
             Atot = np.concatenate([Atot,A1[:,1:]],axis=1)
             ztot = np.concatenate([ztot,ztot[-1]+z1[1:]])
         self.z = ztot

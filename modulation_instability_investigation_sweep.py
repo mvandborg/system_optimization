@@ -38,7 +38,7 @@ Ppeak0_vec = np.arange(50,300,step_sweep)*1e-3      # Pump power (W)
 N_sweep = len(Ppeak0_vec)
 
 # %% Run simulation
-savedir = r'C:\Users\madshv\OneDrive - Danmarks Tekniske Universitet\code\system_optimization\data\MI_test\sec3'
+savedir = r'C:\Users\madshv\OneDrive - Danmarks Tekniske Universitet\data\MI_test\sec1'
 
 for i in range(N_sweep):
     Ppeak0 = Ppeak0_vec[i]
