@@ -8,7 +8,8 @@ import sys
 sys.path.insert(0, 'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/code/system_optimization/src')
 sys.path.insert(0, 'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/code')
 import numpy as np
-from solver_system import System_solver_class
+import pickle
+from solver_system import System_solver_class,gnls1
 from scipy.constants import c
 from numpy import pi
 from help_functions import inv_dbm, inv_norm_fft, norm_fft
@@ -140,5 +141,43 @@ class Simulation_pulsed_single_fiber:
 
         self.A0 = self.A0+self.Anoise
         self.AF0 = norm_fft(fftshift(fft(self.A0)),self.dt)
-        
+    
+    def run(self):
+        z,A = gnls1(self.t,self.omega,self.A0,self.L,self.Fiber,self.Nz_save)
+        self.z = z
+        self.A = A
+        return z,A
 
+    def save_pickle(self,filedir,filename):
+        savedict = {
+            "A":self.A,
+            "z":self.z,
+            "f":self.f_sh,
+            "t":self.t,
+            "Fiber":self.Fiber,
+            "L":self.L,
+            "T0":self.T0,
+            "PSDnoise_dbmHz":self.PSDnoise_dbmHz,
+        }
+        with open(filedir+'/'+filename, "wb") as f:
+            pickle.dump(savedict, f)
+        
+# Class of multiple section fiber propagation for MI investigation
+class Simulation_pulsed_sections_fiber(Simulation_pulsed_single_fiber):
+    def __init__(self,t,A0,L,Nz_save,Fiber,PSDnoise_dbmHz,Nsec):
+        super().__init__(t,A0,L,Nz_save,Fiber,PSDnoise_dbmHz)
+        self.Nsec = Nsec
+    
+    def run(self):
+        Atot = []
+        ztot = []
+        z1,A1 = gnls1(self.t,self.omega,self.A0,self.L,self.Fiber,self.Nz_save)
+        Atot = A1
+        ztot = z1
+        for i in range(1,self.Nsec):
+            z1,A1 = gnls1(self.t,self.omega,self.A0,self.L,self.Fiber,self.Nz_save)
+            Atot = np.concatenate([Atot,A1[:,1:]],axis=1)
+            ztot = np.concatenate([ztot,ztot[-1]+z1[1:]])
+        self.z = ztot
+        self.A = Atot
+        return ztot,Atot
