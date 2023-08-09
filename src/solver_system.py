@@ -11,6 +11,7 @@ from numpy import exp
 from scipy.integrate import solve_ivp,simpson
 from scipy.constants import h
 from scipy.constants import k as kB
+from scipy.fft import fft,ifft
 from erbium_model.src.simulation_erbium import Erbium_simulation_class
 
 
@@ -131,21 +132,23 @@ class System_solver_class:
         Sase_fw = nsp*h*f_pr*gr*Gfw[-1]*simpson(Pp/Gfw,z)
         Sase_bw = nsp*h*f_pr*gr*Gbw[0]*simpson(Pp/Gbw,z)
         return z,Pp,Ppr,Sase_fw,Sase_bw
-    
+
     def prop_EDF(self,EDFclass,L,Nz,Pp0,Ppr0,lam_noise_init):
         z_EDF = np.linspace(0,L,Nz)
-        Sim_EDF = Erbium_simulation_class(EDFclass,self.no_of_modes,z_EDF)
+        Sim_EDF = Erbium_simulation_class(EDFclass,z_EDF)
         Sim_EDF.add_fw_signal(self.lam_p,Pp0)
         Sim_EDF.add_fw_signal(self.lam_pr,Ppr0)
-        Sim_EDF.add_noise(lam_noise_init)
-        res,_ = Sim_EDF.run()
-        z_EDF = res.x
-        Pp = res.y[0]
-        Ppr = res.y[1]
+        Sim_EDF.add_noise(np.min(lam_noise_init),
+                          np.max(lam_noise_init),
+                          len(lam_noise_init))
+        Res = Sim_EDF.run()
+        z_EDF = Res.z
+        Pp = Res.Psignal[0]
+        Ppr = Res.Psignal[1]
         
-        Nlamnoise = len(lam_noise_init)-1
-        P_noisefw = res.y[2:2+int(Nlamnoise)]
-        P_noisebw = res.y[2+int(Nlamnoise):]
+        P_noisefw = Res.Pnoise_fw
+        P_noisebw = Res.Pnoise_bw
+        Nlamnoise = len(P_noisefw)
         S_noisefw = np.zeros(P_noisefw.shape)
         S_noisebw = np.zeros(P_noisebw.shape)
         for i in range(0,len(z_EDF)):
@@ -171,21 +174,169 @@ class System_result_class:
         P_b = self.calc_brillouin_power()
         P_b_end = P_b[-1]*self.Gtotal
         Snoisebw_total = self.calc_noise_power()
-        SNR = P_b_end/(Snoisebw_total*self.Sim_class.FWHM_b)
+        Pb_ref = 0.2*400e-9*self.scatter_coeff()
+        C1 = 0.38e6 # Inherent signal fluctuation noise (Hz)
+        C2 = 0.19e3*Pb_ref # Shot noise (Hz/W)
+        C3 = 1.26e3*Pb_ref # Shot noise (Hz/W)
+        SNR = C1+C2/P_b
         return SNR
     
+    def scatter_coeff(self):
+        S = self.Sim_class
+        return S.vg*kB*S.Temp*S.Gamma_b*S.f_pr*S.g_b/(8*S.f_b)*1e18
+
     def calc_brillouin_power(self):
         S = self.Sim_class
-        Epr = self.Ppr*S.Tpulse        # Pulse energy (nJ)
-        P_b = kB*S.Temp*S.Gamma_b*S.f_pr/(4*S.f_b)*S.g_b*S.vg*Epr#*exp(1/2*g_b*vg*Epr)
-        return P_b  
+        Epulse = S.Tpulse*self.Ppr*1e-9  # Pulse energy (J)
+        return self.scatter_coeff()*Epulse 
         
     def calc_noise_power(self):
         Gsmall = self.Gsmall
         Snoisebw = self.Snoisebw
         Gacc = 1
         Snoisebw_total = Snoisebw[0]*Gacc
-        for i in range(0,len(Gsmall)-1):
+        for i in range(len(Gsmall)-1):
             Gacc = Gacc*Gsmall[i]
             Snoisebw_total = Snoisebw_total+Snoisebw[i+1]*Gacc
         return Snoisebw_total
+
+
+# Code for pulsed propagation
+def gnls(T,W,A0,L,Fiber,Nz,nsaves):
+    # Propagates the input pulse A0 using the GNLS split step method.
+    # OUTPUT VARIABLES
+    # z: List of z-coordinates
+    # As: Saved time domain field a t distances z
+    # INPUT VARIABLES
+    # T: Time list
+    # W: List of angular frequencies
+    # A0: Input pulse
+    # L: Propagation length
+    # gamma: Nonlinear coefficient
+    # beta2: GVD
+    # beta3: 3rd order dispersion
+    # beta4: 4th order dispersion
+    # Nz: No. of steps in progagation (z) direction
+    # nsaves: No. of saves of the field along z
+    # Fiber: Fiberclass
+    
+    gr = np.array([Fiber.gr*Fiber.omega[0]/Fiber.omega[1],Fiber.gr])
+    gamma = Fiber.gamma
+    fr = Fiber.fr
+    alpha = Fiber.alpha
+    beta2 = Fiber.beta2
+    domega = Fiber.omega[0]-Fiber.omega[1]
+    dbeta2 = beta2[0]-beta2[1]
+    dbeta1 = beta2[1]*domega+dbeta2*domega/2
+    
+    # Define frequencies
+    N = len(T)
+            
+    # Linear operators D in frequency
+    Dp = 1j*(-dbeta1*W+beta2[0]/2*W**2)-alpha[0]/2    # Linear operator
+    Dpr = 1j*((beta2[1]/2*W**2))-alpha[1]/2
+    
+    z = np.linspace(0,L,nsaves)         # List of z-coordinates
+    
+    # For-loop going through each propagation step
+    BF0 = fft(A0,axis=1)             # Initial frequency domain field
+    
+    Dcon = np.concatenate([Dp,Dpr])
+    BFp = BF0[0]
+    BFpr = BF0[1]
+    
+    Ap = np.zeros([N,nsaves],dtype=np.cdouble)
+    Apr = np.zeros([N,nsaves],dtype=np.cdouble)
+    
+    Ap[:,0] = A0[0]
+    Apr[:,0] = A0[1]
+    for iz in range(1,len(z)):
+        BFcon = np.concatenate([BFp,BFpr])
+        res = solve_ivp(NonlinOperator,[z[iz-1],z[iz]],BFcon,method='RK45',
+                        t_eval=np.array([z[iz]]),rtol=1e-6,atol=1e-8,
+                        args=(Dcon,gr,gamma,fr,N))
+        BF = res.y
+        BFp = BF[0:N,0]
+        BFpr = BF[N:,0]
+        Ap[:,iz] = ifft(BFp*exp(Dp*z[iz]))
+        Apr[:,iz] = ifft(BFpr*exp(Dpr*z[iz]))
+        print("Simulation status: %.1f %%" % (iz/(nsaves-1)*100))
+    return z,Ap,Apr
+
+def NonlinOperator(z,BF,D,gr,gamma,fr,N):
+    Ap = ifft(BF[0:N]*exp(D[0:N]*z))
+    Apr = ifft(BF[N:]*exp(D[N:]*z))
+    Pp = np.abs(Ap)**2
+    Ppr = np.abs(Apr)**2
+    NAp =  1j*gamma[0]*(Pp+(2-fr)*Ppr)*Ap-1/2*gr[0]*Ppr*Ap
+    NApr = 1j*gamma[1]*(Ppr+(2-fr)*Pp)*Apr+1/2*gr[1]*Pp*Apr
+    dBF = np.concatenate([fft(NAp),fft(NApr)])*exp(-D*z)
+    return dBF
+
+def prop_EDF(EDFclass,Nz,Pp0,Ppr0,lam_p,lam_pr,L):
+    z_EDF = np.linspace(0,L,Nz)
+    no_of_modes = 2     # Number of optical modes in the fiber
+    Nlamnoise = 21
+    lamnoise_min = 1500*1e-9
+    lamnoise_max = 1590*1e-9
+    Sim_EDF = Erbium_simulation_class(EDFclass,z_EDF)
+    Sim_EDF.add_fw_signal(lam_p,Pp0)
+    Sim_EDF.add_fw_signal(lam_pr,Ppr0)
+    Sim_EDF.add_noise(lamnoise_min,lamnoise_max,Nlamnoise)
+    Res = Sim_EDF.run()
+    z_EDF = Res.z
+    Pp = Res.Psignal[0]
+    Ppr = Res.Psignal[1]
+    return z_EDF*1e-3,Pp,Ppr
+
+# Code for pulsed propagation
+def gnls1(T,W,A0,L,Fiber,nsaves):
+    # Propagates the input pulse A0 using the GNLS split step method.
+    # OUTPUT VARIABLES
+    # z: List of z-coordinates
+    # As: Saved time domain field a t distances z
+    # INPUT VARIABLES
+    # T: Time list
+    # W: List of angular frequencies
+    # A0: Input pulse
+    # L: Propagation length
+    # gamma: Nonlinear coefficient
+    # beta2: GVD
+    # beta3: 3rd order dispersion
+    # beta4: 4th order dispersion
+    # Nz: No. of steps in progagation (z) direction
+    # nsaves: No. of saves of the field along z
+    # Fiber: Fiberclass
+    gamma = Fiber.gamma[1]
+    alpha = Fiber.alpha[1]
+    beta2 = Fiber.beta2[1]
+    
+    # Define frequencies
+    N = len(T)
+        
+    # Linear operators D in frequency
+    D = 1j*(beta2/2*W**2)-alpha/2
+    
+    z = np.linspace(0,L,nsaves)         # List of z-coordinates
+    
+    # For-loop going through each propagation step
+    BF = fft(A0)             # Initial frequency domain field
+    
+    A = np.zeros([N,nsaves],dtype=np.cdouble)
+    A[:,0] = A0
+    for iz in range(1,len(z)):
+        res = solve_ivp(NonlinOperator1,[z[iz-1],z[iz]],BF,method='RK45',
+                        t_eval=np.array([z[iz]]),rtol=1e-6,atol=1e-8,
+                        args=(D,gamma))
+        BF = res.y[:,0]
+        A[:,iz] = ifft(BF*exp(D*z[iz]))
+        print("Simulation status: %.1f %%" % (iz/(nsaves-1)*100))
+    return z,A
+
+def NonlinOperator1(z,BF,D,gamma):
+    Apr = ifft(BF*exp(D*z))
+    Ppr = np.abs(Apr)**2
+    NA = 1j*gamma*Ppr*Apr
+    dBF = fft(NA)*exp(-D*z)
+    return dBF
+

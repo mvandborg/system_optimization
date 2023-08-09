@@ -12,6 +12,7 @@ from scipy.constants import c
 from numpy import pi
 c = c*1e-9              # Unit m/ns
 
+# Class of CW simulation
 class System_simulation_class:
     def __init__(self,lam_p,lam_pr,Ppr0,Pp0,L0,Fiber_fib0,Fiber_pd0,Nz,\
                  Tpulse,Temp,f_b,FWHM_b,ng,g_b):
@@ -81,3 +82,16 @@ class System_simulation_class:
     def run(self):
         Sol = System_solver_class(self)
         return Sol.run()
+
+
+# Class of Pulsed system simulation
+class System_simulation_pulsed_class(System_simulation_class):
+    def __init__(self,t,Apr0,Ap0,lam_p,lam_pr,L0,Fiber_fib0,Fiber_pd0,Nz,
+                 Tpulse,Temp,f_b,FWHM_b,ng,g_b):
+        self.Apr0 = Apr0
+        self.Ap0 = Ap0
+        self.t = t
+        Ppr0 = np.max(Apr0)**2
+        Pp0 = np.max(Ap0)**2
+        super().__init(self,lam_p,lam_pr,Ppr0,Pp0,L0,Fiber_fib0,Fiber_pd0,Nz,
+                       Tpulse,Temp,f_b,FWHM_b,ng,g_b)
