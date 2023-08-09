@@ -27,6 +27,8 @@ from erbium_model.src.fiberdata_erbium import Erbiumfiber_class
 from erbium_model.src.simulation_erbium import Erbium_simulation_class
 from src.fiberdata_passive import Passivefiber_class
 from help_functions import dbm,inv_dbm
+from src.solver_system import gnls,prop_EDF
+from physical_parameters import *
 c = c*1e-9              # Unit m/ns
 
 def Apr0_func(t,T0pr,Ppr0):
@@ -44,157 +46,15 @@ def Apr0_func(t,T0pr,Ppr0):
     #return z**0*t**0*sqrt(Ppr0)
     #return sqrt(Ppr0)*(H00*H01+H1n*H1p*(-1/DT*(t-(T0pr+DT)/2))+H0n*H0p*(1/DT*(t+(T0pr-DT)/2)))
 
-    return sqrt(Ppr0)*exp(-(2*t/T0pr)**22)
-
-
-def gnls(T,W,A0,L,Fiber,Nz,nsaves):
-    # Propagates the input pulse A0 using the GNLS split step method.
-    # OUTPUT VARIABLES
-    # z: List of z-coordinates
-    # As: Saved time domain field a t distances z
-    # INPUT VARIABLES
-    # T: Time list
-    # W: List of angular frequencies
-    # A0: Input pulse
-    # L: Propagation length
-    # gamma: Nonlinear coefficient
-    # beta2: GVD
-    # beta3: 3rd order dispersion
-    # beta4: 4th order dispersion
-    # Nz: No. of steps in progagation (z) direction
-    # nsaves: No. of saves of the field along z
-    # Fiber: Fiberclass
-    
-    gr = np.array([Fiber.gr*Fiber.omega[0]/Fiber.omega[1],Fiber.gr])
-    gamma = Fiber.gamma
-    fr = Fiber.fr
-    alpha = Fiber.alpha
-    beta2 = Fiber.beta2
-    domega = Fiber.omega[0]-Fiber.omega[1]
-    dbeta2 = beta2[0]-beta2[1]
-    dbeta1 = beta2[1]*domega+dbeta2*domega/2
-    
-    # Define frequencies
-    N = len(T)
-            
-    # Linear operators D in frequency
-    Dp = 1j*(beta2[0]/2*W**2)-alpha[0]/2    # Linear operator
-    Dpr = 1j*(dbeta1*W+(beta2[1]/2*W**2))-alpha[1]/2
-    
-    z = np.linspace(0,L,nsaves)         # List of z-coordinates
-    
-    # For-loop going through each propagation step
-    BF0 = fft(A0,axis=1)             # Initial frequency domain field
-    
-    Dcon = np.concatenate([Dp,Dpr])
-    BFp = BF0[0]
-    BFpr = BF0[1]
-    
-    Ap = np.zeros([N,nsaves],dtype=np.cdouble)
-    Apr = np.zeros([N,nsaves],dtype=np.cdouble)
-    
-    Ap[:,0] = A0[0]
-    Apr[:,0] = A0[1]
-    for iz in range(1,len(z)):
-        BFcon = np.concatenate([BFp,BFpr])
-        res = solve_ivp(NonlinOperator,[z[iz-1],z[iz]],BFcon,method='RK45',
-                        t_eval=np.array([z[iz]]),rtol=1e-6,atol=1e-8,
-                        args=(Dcon,gr,gamma,fr,N))
-        BF = res.y
-        BFp = BF[0:N,0]
-        BFpr = BF[N:,0]
-        Ap[:,iz] = ifft(BFp*exp(Dp*z[iz]))
-        Apr[:,iz] = ifft(BFpr*exp(Dpr*z[iz]))
-        print("Simulation status: %.1f %%" % (iz/(nsaves-1)*100))
-    return z,Ap,Apr
-
-def NonlinOperator(z,BF,D,gr,gamma,fr,N):
-    Ap = ifft(BF[0:N]*exp(D[0:N]*z))
-    Apr = ifft(BF[N:]*exp(D[N:]*z))
-    Pp = np.abs(Ap)**2
-    Ppr = np.abs(Apr)**2
-    NAp =  1j*gamma[0]*(Pp+(2-fr)*Ppr)*Ap-1/2*gr[0]*Ppr*Ap
-    NApr = 1j*gamma[1]*(Ppr+(2-fr)*Pp)*Apr+1/2*gr[1]*Pp*Apr
-    dBF = np.concatenate([fft(NAp),fft(NApr)])*exp(-D*z)
-    return dBF
-
-def prop_EDF(EDFclass,Nz,Pp0,Ppr0,lam_p,lam_pr,L):
-    z_EDF = np.linspace(0,L,Nz)
-    no_of_modes = 2     # Number of optical modes in the fiber
-    Nlamnoise = 21
-    lamnoise_min = 1500*1e-9
-    lamnoise_max = 1590*1e-9
-    Sim_EDF = Erbium_simulation_class(EDF,z_EDF)
-    Sim_EDF.add_fw_signal(lam_p,Pp0)
-    Sim_EDF.add_fw_signal(lam_pr,Ppr0)
-    Sim_EDF.add_noise(lamnoise_min,lamnoise_max,Nlamnoise)
-    Res = Sim_EDF.run()
-    z_EDF = Res.z
-    Pp = Res.Psignal[0]
-    Ppr = Res.Psignal[1]
-    return z_EDF*1e-3,Pp,Ppr
+    return sqrt(Ppr0)*exp(-(2*t/T0pr)**2)
 
 # Physical parameters
-Pp0 = 300e-3             # CW pump power (W)
-Ppr0 = 20e-3            # Probe peak power (W)
-
-T0pr = 25               # Probe duration (ns)
-lam_p = 1455e-9         # Wavelength (m)
-lam_pr = 1550e-9        
-
-f_p = c/lam_p           # Frequency (GHz)
-f_pr = c/lam_pr
-
-omega_p = 2*pi*f_p      # Angular frequency rad*GHz
-omega_pr = 2*pi*f_pr
-
-# Define fiber parameters
-gamma_raman = 1.72e-14#1.72e-14  # Raman gain coefficient (m/W)
-df_raman = f_p-f_pr
-
-# Sumitomo Z Fiber LL
-alpha_db_p1 = 0.195         # Fiber loss (dB/km)
-alpha_db_pr1 = 0.161
-D_p1 = 13                   # GVD param (ps/(nm*km))
-D_pr1 = 17
-Aeff1 = 85e-12
-Fiber_SumLL = Passivefiber_class(np.array([lam_p,lam_pr]),\
-                           alpha_db=np.array([alpha_db_p1,alpha_db_pr1]),\
-                           D=np.array([D_p1,D_pr1]),\
-                           Aeff=np.array([Aeff1,Aeff1]))
-Fiber_SumLL.add_raman(df_raman,gamma_raman/Aeff1)
-    
-# Sumitomo Z-PLUS Fiber ULL
-alpha_db_p1 = 0.180         # Fiber loss (dB/km)
-alpha_db_pr1 = 0.153
-D_p1 = 16                   # GVD param (ps/(nm*km))
-D_pr1 = 20
-Aeff1 = 112e-12
-Fiber_SumULL = Passivefiber_class(np.array([lam_p,lam_pr]),\
-                           np.array([alpha_db_p1,alpha_db_pr1]),\
-                           np.array([D_p1,D_pr1]),\
-                           np.array([Aeff1,Aeff1]))
-Fiber_SumULL.add_raman(df_raman,gamma_raman/Aeff1)
-    
-# Sumitomo Z-PLUS Fiber 150
-alpha_db_p1 = 0.180         # Fiber loss (dB/km)
-alpha_db_pr1 = 0.150
-D_p1 = 17                   # GVD param (ps/(nm*km))
-D_pr1 = 21
-Aeff1 = 150e-12
-Fiber_Sum150 = Passivefiber_class(np.array([lam_p,lam_pr]),\
-                           np.array([alpha_db_p1,alpha_db_pr1]),\
-                           np.array([D_p1,D_pr1]),\
-                           np.array([Aeff1,Aeff1]))
-Fiber_Sum150.add_raman(df_raman,gamma_raman/Aeff1)
-
-dir_edf = r'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/fiber_data/ofs_edf/'
-file_edf = r'LP980_22841_labversion.s'
-#LP980_11841 
-EDF = Erbiumfiber_class.from_ofs_files(dir_edf, file_edf)
+Pp0 = 1e-6             # CW pump power (W)
+Ppr0 = 250e-3            # Probe peak power (W)
 
 # Define propagation fibers
 L0 = 0.001
+T0pr = 10
 
 L_co = [150e3]
 L_edf = [0.1]
@@ -210,12 +70,10 @@ Fiber_pd = [Fiber_SumULL]
 
 Nsec = len(L_co)
 
-
 # Numerical parameters
+Tmax = T0pr*30          # Simulation window size (ns)
 
-Tmax = T0pr*10          # Simulation window size (ns)
-
-N = 2**13
+N = 2**12
 dt = Tmax/N
 fsam = 1/dt         # Sampling frequency (GHz)
 fnyq = fsam/2
@@ -230,11 +88,11 @@ omega = 2*pi*f
 omega_sh = fftshift(omega)
 f_sh = omega_sh/(2*pi)
 
-
+# Noise floor parameters
 PSDnoise_dbmHz = -121                            # Noise floor (dBm/Hz)
 PSDnoise_WHz = 10**(PSDnoise_dbmHz/10)*1e-3     # Noise floor (W/Hz)
 PSDnoise_WGHz = PSDnoise_WHz*1e9
-ESDnoise_JGHz = 1/2*h*omega_pr*Tmax#PSDnoise_WGHz*Tmax              # Energy spectral density of the noise (J/Hz)
+ESDnoise_JGHz = PSDnoise_WGHz*Tmax              # Energy spectral density of the noise (J/Hz)
 
 theta_noise_p = pi*np.random.uniform(size=N)
 theta_noise_pr = pi*np.random.uniform(size=N)
@@ -274,7 +132,7 @@ for i in range(0,Nsec):
     Ppr_cw_edf = np.max(np.abs(Apr_co[:,-1])**2)
     
     print('Pump power before edf:',Pp_cw_edf)
-    z_edf,Pp_edf,Ppr_edf = prop_EDF(EDF,Nz_save,Pp_cw_edf,Ppr_cw_edf,lam_p,lam_pr,L_edf[i])
+    z_edf,Pp_edf,Ppr_edf = prop_EDF(Fiber_edf,Nz_save,Pp_cw_edf,Ppr_cw_edf,lam_p,lam_pr,L_edf[i])
     Gpr_edf = Ppr_edf/Ppr_edf[0]
     Gp_edf = Pp_edf/Pp_edf[0]
     Ap_edf = Ap_co[:,-1]*sqrt(Gp_edf[-1])

@@ -51,7 +51,7 @@ lamnoise_max = 1600e-9
 Nz = 501
 
 Sim = System_simulation_class(lam_p,lam_pr,Ppr0,Pp0,L0,Fiber_fib0,Fiber_pd0,Nz,\
-                              Tpulse,T,f_b,FWHM_b,ng,g_b)
+                              T0pr,T,f_b,FWHM_b,ng,g_b)
 for i in range(0,Nsec):
     Sim.add_section(L_co[i],L_edf[i],L_fib[i],Fiber_co[i],\
                     Fiber_edf[i],Fiber_fib[i],Fiber_pd[i],C[i])

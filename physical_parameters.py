@@ -19,10 +19,14 @@ lam_pr = 1550e-9
 f_p = c/lam_p           # Frequencies (GHz)
 f_pr = c/lam_pr
 
-f_delta = f_p-f_pr      
+omega_p = 2*pi*f_p
+omega_pr = 2*pi*f_pr
+
+f_delta = f_p-f_pr
+
+T0pr = 10e-3               # Pulse duration (ns)
 
 # Brillouin parameters
-Tpulse = 50             # Pulse duration (ns)
 T = 300                 # Temperature (K)
 f_b = 10.8              # Brillouin frequency shift (GHz)
 FWHM_b = 38e-3          # FWHM of Brillouin peak (GHz)
@@ -73,5 +77,6 @@ Fiber_Sum150 = Passivefiber_class(np.array([lam_p,lam_pr]),\
 Fiber_Sum150.add_raman(df_raman,gamma_raman/Aeff1)
 
 dir_edf = r'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/fiber_data/ofs_edf/'
-file_edf = r'LP980_11841.s'
+file_edf = r'LP980_22841_labversion.s'
+#'LP980_22841_labversion','LP980_11841'
 Fiber_edf = Erbiumfiber_class.from_ofs_files(dir_edf, file_edf)

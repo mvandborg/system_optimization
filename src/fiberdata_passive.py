@@ -25,7 +25,7 @@ class Passivefiber_class:
         
         self.f = c/self.lam                     # Frequency (GHz)
         self.omega = 2*pi*self.f                # Angular frequency (GHz)
-        self.gamma = self.n2*self.omega/(c*self.Aeff)   # Nonlinear coefficient (1/m)      
+        self.gamma = self.n2*self.omega/(c*self.Aeff)   # Nonlinear coefficient (1/W*m)      
         
         
     def add_raman(self,df,gr):
