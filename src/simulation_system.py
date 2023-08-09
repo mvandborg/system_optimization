@@ -6,10 +6,13 @@ Created on Wed Aug 24 11:47:10 2022
 """
 import sys
 sys.path.insert(0, 'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/code/system_optimization/src')
+sys.path.insert(0, 'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/code')
 import numpy as np
 from solver_system import System_solver_class
 from scipy.constants import c
 from numpy import pi
+from help_functions import inv_dbm, inv_norm_fft, norm_fft
+from numpy.fft import fft,ifft,fftfreq,fftshift
 c = c*1e-9              # Unit m/ns
 
 # Class of CW simulation
@@ -95,3 +98,47 @@ class System_simulation_pulsed_class(System_simulation_class):
         Pp0 = np.max(Ap0)**2
         super().__init(self,lam_p,lam_pr,Ppr0,Pp0,L0,Fiber_fib0,Fiber_pd0,Nz,
                        Tpulse,Temp,f_b,FWHM_b,ng,g_b)
+        
+        
+# Class of single fiber propagation for MI investigation
+class Simulation_pulsed_single_fiber:
+    def __init__(self,t,A0,L,Nz_save,Fiber,PSDnoise_dbmHz):
+        self.t = t
+        self.A0 = A0
+        self.L = L
+        self.N = len(t)
+        self.Tmax = t[-1]-t[0]
+        self.A0 = A0
+        self.Nz_save = Nz_save
+        self.Fiber = Fiber
+        self.PSDnoise_dbmHz = PSDnoise_dbmHz
+                
+        self.dt = self.Tmax/self.N
+        self.fsam = 1/self.dt         # Sampling frequency (GHz)
+        self.fnyq = self.fsam/2
+        
+        self.f = fftfreq(self.N,d=self.dt)
+        self.df = self.f[1]-self.f[0]
+        self.omega = 2*pi*self.f
+        self.omega_sh = fftshift(self.omega)
+        self.f_sh = self.omega_sh/(2*pi)
+        
+        self.C_capture = 1.5e-3
+        self.C_loss = 4.5e-3
+        self.T0 = 100       # NEEDS TO BE FIXED
+        self.Lpulse = c/1.45*self.T0
+        self.C_rayscat = self.C_capture*self.C_loss*(self.Lpulse/2)    # Rayleigh scattering coefficient (unitless)
+        self.C_bril = 8e-9   # Brillouin scattering coefficient (unitless)
+        
+        PSDnoise_WHz = inv_dbm(self.PSDnoise_dbmHz)              # Noise floor (W/Hz)
+        PSDnoise_WGHz = PSDnoise_WHz*1e9                        # Noise floor (W/GHz)
+        self.ESDnoise_JGHz = PSDnoise_WGHz*self.Tmax                  # Energy spectral density of the noise (nJ/GHz)
+        
+        self.theta_noise = pi*np.random.uniform(size=self.N)
+        self.ASDnoise = np.sqrt(self.ESDnoise_JGHz)*np.exp(1j*self.theta_noise)    # Amplitude spectral density (sqrt(nJ/Hz))
+        self.Anoise = ifft(inv_norm_fft(self.ASDnoise,self.dt))                 # Normalized such that |AF|^2=ESD and sum(|AF|^2)*df=sum(|A|^2)*dt
+
+        self.A0 = self.A0+self.Anoise
+        self.AF0 = norm_fft(fftshift(fft(self.A0)),self.dt)
+        
+

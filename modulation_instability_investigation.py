@@ -14,21 +14,26 @@ from physical_parameters import *
 from numpy.fft import fft,ifft,fftfreq,fftshift
 from scipy.signal import convolve
 from src.solver_system import gnls1
-from help_functions import dbm,inv_dbm,db
+from src.simulation_system import Simulation_pulsed_single_fiber
+from help_functions import dbm,inv_dbm,db,norm_fft,inv_norm_fft
 
 # %% Define propagation fibers
 def A0_func(t,T0,Ppeak0):
     return sqrt(Ppeak0)*exp(-(2*t/T0)**22)
 
-def norm_fft(AF,dt):
-    return AF*dt
+L = 75e3                # Fiber length (km)
+T0 = 100                # Pulse length (ns)
+Ppeak0 = 150e-3         # Pump power (W)
+Fiber = Fiber_SumULL
+PSDnoise_dbmHz = -141   # Noise floor (dBm/Hz)
 
-def inv_norm_fft(AF,dt):
-    return AF/dt
+Tmax = T0*7             # Simulation window size (ns)
+N = 2**16
+Nz_save = 101
+t = np.linspace(-Tmax/2,Tmax/2,N)
+A0 = A0_func(t,T0,Ppeak0)
 
-L = 75e3           # Fiber length (km)
-T0 = 100              # Pulse length (ns)
-Ppeak0 = 150e-3     # Pump power (W)
+Sim = Simulation_pulsed_single_fiber(t,A0,L,Nz_save,Fiber,PSDnoise_dbmHz)
 
 C_capture = 1.5e-3
 C_loss = 4.5e-3
@@ -37,18 +42,10 @@ C_rayscat = C_capture*C_loss*(Lpulse/2)    # Rayleigh scattering coefficient (un
 
 C_bril = 8e-9   # Brillouin scattering coefficient (unitless)
 
-Fiber = Fiber_SumULL
-
-Tmax = T0*7          # Simulation window size (ns)
-
-N = 2**16
 dt = Tmax/N
 fsam = 1/dt         # Sampling frequency (GHz)
 fnyq = fsam/2
 
-Nz_save = 101
-
-t = np.linspace(-Tmax/2,Tmax/2,N)
 f = fftfreq(N,d=dt)
 df = f[1]-f[0]
 omega = 2*pi*f
@@ -56,7 +53,6 @@ omega_sh = fftshift(omega)
 f_sh = omega_sh/(2*pi)
 
 # Noise floor parameters
-PSDnoise_dbmHz = -141                               # Noise floor (dBm/Hz)
 PSDnoise_WHz = inv_dbm(PSDnoise_dbmHz)              # Noise floor (W/Hz)
 PSDnoise_WGHz = PSDnoise_WHz*1e9                    # Noise floor (W/GHz)
 ESDnoise_JGHz = PSDnoise_WGHz*Tmax                  # Energy spectral density of the noise (nJ/GHz)
@@ -70,13 +66,20 @@ Anoise = ifft(inv_norm_fft(ASDnoise,dt))                 # Normalized such that 
 A0 = A0_func(t,T0,Ppeak0)+Anoise
 AF0 = norm_fft(fftshift(fft(A0)),dt)
 
+
+
 # %% Run simulation
+Nsec = 3
+
 z1,A1 = gnls1(t,omega,A0,L,Fiber,Nz_save)
 G = exp(Fiber.alpha[1]*L)
 A0_1 = A1[:,-1]*sqrt(G)
 z2,A2 = gnls1(t,omega,A0_1,L,Fiber,Nz_save)
 A0_2 = A2[:,-1]*sqrt(G)
 z3,A3 = gnls1(t,omega,A0_2,L,Fiber,Nz_save)  
+
+z = np.concatenate([z1,z1[-1]+z2,z1[-1]+z2[-1]+z3])
+A = np.concatenate([A1,A2,A3],axis=1)
 
 # %% Post processing
 def moving_average(a, n=3):
@@ -86,9 +89,6 @@ def moving_average(a, n=3):
 
 def lor(f,f0,fwhm):
     return (fwhm/2)**2/((f-f0)**2+(fwhm/2)**2)
-
-z = np.concatenate([z1,z1[-1]+z2,z1[-1]+z2[-1]+z3])
-A = np.concatenate([A1,A2,A3],axis=1)
 
 AF = norm_fft(fftshift(fft(A,axis=0),axes=0),dt)       # Normalized such that |AF|^2=ESD and sum(|AF|^2)*df=sum(|A|^2)*dt
 PF_end = np.abs(AF[:,-1])**2
@@ -180,6 +180,7 @@ savedir = r'C:\Users\madshv\OneDrive - Danmarks Tekniske Universitet\code\system
 if issave==1:
     savefname = 'P0_'+str(int(Ppeak0*1000))+'.pkl'
     savedict = {
+        "Nsec":Nsec,
         "A":A,
         "z":z,
         "f":f_sh,
