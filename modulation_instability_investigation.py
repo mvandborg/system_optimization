@@ -14,17 +14,16 @@ from physical_parameters import *
 from numpy.fft import fft,fftshift
 from scipy.signal import convolve
 from src.simulation_system import Simulation_pulsed_sections_fiber
-from help_functions import dbm,db,norm_fft, moving_average, lorentzian
+from help_functions import dbm,db,inv_dbm,norm_fft, moving_average, lorentzian
 
 # %% Define propagation fibers
 def A0_func(t,T0,Ppeak0):
     return sqrt(Ppeak0)*exp(-(2*t/T0)**22)
 
-L = 75e3                # Fiber length (km)
+L = 100e3                # Fiber length (km)
 T0 = 100                # Pulse length (ns)
-Ppeak0 = 150e-3         # Pump power (W)
+Ppeak0 = 500e-3         # Pump power (W)
 Fiber = Fiber_SumULL
-PSDnoise_dbmHz = -141   # Noise floor (dBm/Hz)
 
 Tmax = T0*7             # Simulation window size (ns)
 N = 2**16
@@ -32,8 +31,16 @@ t = np.linspace(-Tmax/2,Tmax/2,N)
 Nz_save = 101
 A0 = A0_func(t,T0,Ppeak0)
 
-Nsec = 3
+PSD_dbm_nm = -40
+PSD_W_nm = inv_dbm(PSD_dbm_nm)
+PSD_W_m = PSD_W_nm*1e9   # convert nm to m
+PSD_W_Hz = PSD_W_m*(1.55e-6)**2/2e8 # convert dlam to df
+PSD_dbm_Hz = dbm(PSD_W_Hz)
+PSDnoise_dbmHz = -141   # Noise floor (dBm/Hz)
+
+Nsec = 1
 S = Simulation_pulsed_sections_fiber(t,A0,L,Nz_save,Fiber,PSDnoise_dbmHz,Nsec)
+
 
 # %% Run simulation
 z,A = S.run()
@@ -60,7 +67,7 @@ PSD_bril_dbmHz = dbm(PSD_bril*1e-9)
 
 SNR = PSD_bril/PSD_rayscat
 
-Lf = lorentzian(S.f_sh,11,50e-3)
+Lf = lorentzian(S.f,11,50e-3)
 BF2 = []
 for i in range(AF.shape[-1]):
     BF2.append(convolve(Lf,np.abs(AF[:,i])**2,mode='same'))
@@ -100,12 +107,12 @@ fig2,ax2 = plt.subplots(constrained_layout=True)
 ax2.plot(z,dbm(np.sum(np.abs(AF)**2,axis=0)))
 ax2.plot(z,dbm(np.sum(np.abs(AF[:,0])**2,axis=0)*exp(-Fiber.alpha[1]*z)),ls='--')
 
-
+G = 1
 fac = 1.0*(z<L)+1/G*(z>L)*(z<2*L)+1/G**2*(z>2*L)
 P_inband = np.sum(np.abs(AF)**2*fac*(np.abs(F.T)<0.1),axis=0)*S.df
 P_outband = np.sum(np.abs(AF)**2*fac*(np.abs(F.T)>0.1),axis=0)*S.df
 
-fig3,ax3 = plt.subplots(1,2,constrained_layout=True)
+fig3,ax3 = plt.subplots(1,3,constrained_layout=True)
 ax3[0].plot(z*1e-3,P_inband*exp(Fiber.alpha[1]*z),label='Inband')
 ax3[0].plot(z*1e-3,P_outband*exp(Fiber.alpha[1]*z),label='Outband')
 ax3[0].set_ylabel('Energy')
@@ -114,6 +121,9 @@ ax3[0].legend()
 ax3[1].plot(z*1e-3,db(SNR))
 ax3[1].set_ylabel('SNR (dB)')
 ax3[1].set_xlabel('z (km)')
+ax3[2].plot(z*1e-3,db(P_inband/P_outband))
+ax3[2].set_ylabel(r'$P_{inband}/P_{outband}$ (dB)')
+ax3[2].set_xlabel('z (km)')
 
 fig4,ax4 = plt.subplots(constrained_layout=True)
 for i in [0,50,100,150,200,250,300]: 

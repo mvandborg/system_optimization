@@ -2,4 +2,6 @@
 *.pyc
 *.pkl
 *.bak
+*.npz
+*.npy
 

@@ -8,7 +8,7 @@ sys.path.insert(0, 'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/cod
 import re
 import pickle
 import numpy as np
-from help_functions import norm_fft,moving_average,dbm,db
+from help_functions import norm_fft,moving_average,dbm,db,inv_dbm
 from scipy.fft import fft,fftshift
 from scipy.signal import convolve
 import matplotlib.pyplot as plt
@@ -18,7 +18,7 @@ c = c*1e-9
 # %% Import all data
 
 # Specify the path to the subfolder containing the .pkl files
-subfolder_path = r"C:\Users\madshv\OneDrive - Danmarks Tekniske Universitet\code\system_optimization\data\MI_test\sec1"
+subfolder_path = r"C:\Users\madshv\OneDrive - Danmarks Tekniske Universitet\code\system_optimization\data\MI_test\sec3"
 
 # Initialize an empty list to store loaded data
 dat_vec = []
@@ -97,7 +97,7 @@ for i in range(Nfile):
 
 # %% Plotting
 plt.close('all')
-fig0,ax0 = plt.subplots(1,2,constrained_layout=True)
+fig0,ax0 = plt.subplots(1,3,constrained_layout=True)
 for i in range(Nfile):
     ax0[0].plot(z*1e-3,db(SNR_vec[i]))
 ax0[0].set_ylabel('SNR (dB)')
@@ -105,4 +105,7 @@ ax0[0].set_xlabel('z (km)')
 ax0[1].plot(P0,db(SNR_vec[:,-1]))
 ax0[1].set_xlabel('P0 (mW)')
 ax0[1].set_ylabel('SNR (dB)')
+ax0[2].plot(P0,db(P_inband_vec[:,-2]/P_outband_vec[:,-2]))
+ax0[2].set_xlabel('P0 (mW)')
+ax0[2].set_ylabel(r'$P_{inband}/P_{outband}$ (dB)')
 # %%
