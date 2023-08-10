@@ -4,6 +4,8 @@
 # %% Import modules
 import sys
 import os
+import time
+import multiprocessing
 file_dir = os.path.dirname(__file__)
 sys.path.append(file_dir)
 sys.path.insert(0, 'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/code')
@@ -40,13 +42,23 @@ N_sweep = len(Ppeak0_vec)
 # %% Run simulation
 savedir = r'C:\Users\madshv\OneDrive - Danmarks Tekniske Universitet\data\MI_test\sec1'
 
-for i in range(N_sweep):
-    Ppeak0 = Ppeak0_vec[i]
-    A0 = A0_func(t,T0,Ppeak0)
-    S = Simulation_pulsed_sections_fiber(t,A0,L,Nz_save,Fiber,PSDnoise_dbmHz,Nsec)
-    z,A = S.run()
-    savefname = 'P0_'+str(int(Ppeak0*1000))+'.pkl'
-    S.save_pickle(savedir,savefname)
+def sim_func(args):
+    i, Ppeak0, t, T0, L, Nz_save, Fiber, PSDnoise_dbmHz, Nsec, savedir = args
+    start_time = time.time()
+    A0 = A0_func(t, T0, Ppeak0)
+    S = Simulation_pulsed_sections_fiber(t, A0, L, Nz_save, Fiber, PSDnoise_dbmHz, Nsec)
+    z, A = S.run()
+    savefname = f'P0_{int(Ppeak0 * 1000)}.pkl'
+    #S.save_pickle(savedir, savefname)
+    end_time = time.time()
+    print('End:\t Simulation no. '+str(i)+' Time: '+str(end_time-start_time))
+
+if __name__ == '__main__':
+    args_list = [(i, Ppeak0_vec[i], t, T0, L, Nz_save, Fiber, 
+                  PSDnoise_dbmHz, Nsec, savedir) for i in range(N_sweep)]
+    with multiprocessing.Pool() as pool:
+        pool.map(sim_func, args_list)
+                 
 
 
 # %%
