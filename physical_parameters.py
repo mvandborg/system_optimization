@@ -76,6 +76,18 @@ Fiber_Sum150 = Passivefiber_class(np.array([lam_p,lam_pr]),\
                            np.array([Aeff1,Aeff1]))
 Fiber_Sum150.add_raman(df_raman,gamma_raman/Aeff1)
 
+# Truewave XL
+alpha_db_p1 = 0.23         # Fiber loss (dB/km)
+alpha_db_pr1 = 0.20
+D_p1 = -11                   # GVD param (ps/(nm*km))
+D_pr1 = -3
+Aeff1 = 72e-12
+Fiber_TWXL = Passivefiber_class(np.array([lam_p,lam_pr]),\
+                           np.array([alpha_db_p1,alpha_db_pr1]),\
+                           np.array([D_p1,D_pr1]),\
+                           np.array([Aeff1,Aeff1]))
+Fiber_TWXL.add_raman(df_raman,gamma_raman/Aeff1)
+
 dir_edf = r'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/fiber_data/ofs_edf/'
 file_edf = r'LP980_22841_labversion.s'
 #'LP980_22841_labversion','LP980_11841'

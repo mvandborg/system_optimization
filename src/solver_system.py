@@ -330,7 +330,7 @@ def gnls1(T,W,A0,L,Fiber,nsaves):
                         args=(D,gamma))
         BF = res.y[:,0]
         A[:,iz] = ifft(BF*exp(D*z[iz]))
-        #print("Simulation status: %.1f %%" % (iz/(nsaves-1)*100))
+        print("Simulation status: %.1f %%" % (iz/(nsaves-1)*100))
     return z,A
 
 def NonlinOperator1(z,BF,D,gamma):

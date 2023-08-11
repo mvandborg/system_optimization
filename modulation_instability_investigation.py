@@ -14,16 +14,18 @@ from physical_parameters import *
 from numpy.fft import fft,fftshift
 from scipy.signal import convolve
 from src.simulation_system import Simulation_pulsed_sections_fiber
+from src.simulation_system import Simulation_pulsed_sections2_fiber
 from help_functions import dbm,db,inv_dbm,norm_fft, moving_average, lorentzian
 
 # %% Define propagation fibers
 def A0_func(t,T0,Ppeak0):
     return sqrt(Ppeak0)*exp(-(2*t/T0)**22)
 
-L = 100e3                # Fiber length (km)
+L = 75e3                # Fiber length (km)
 T0 = 100                # Pulse length (ns)
-Ppeak0 = 500e-3         # Pump power (W)
-Fiber = Fiber_SumULL
+Ppeak0 = 300e-3         # Pump power (W)
+Fiber2 = Fiber_SumULL
+Fiber1 = Fiber_TWXL
 
 Tmax = T0*7             # Simulation window size (ns)
 N = 2**16
@@ -39,7 +41,9 @@ PSD_dbm_Hz = dbm(PSD_W_Hz)
 PSDnoise_dbmHz = -141   # Noise floor (dBm/Hz)
 
 Nsec = 1
-S = Simulation_pulsed_sections_fiber(t,A0,L,Nz_save,Fiber,PSDnoise_dbmHz,Nsec)
+L1 = 7e3
+L2 = 93e3
+S = Simulation_pulsed_sections2_fiber(t,A0,L1,L2,Nz_save,Fiber1,Fiber2,PSDnoise_dbmHz,Nsec)
 
 
 # %% Run simulation
