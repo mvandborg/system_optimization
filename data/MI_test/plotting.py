@@ -18,7 +18,7 @@ c = c*1e-9
 # %% Import all data
 
 # Specify the path to the subfolder containing the .pkl files
-subfolder_path = r"C:\Users\madshv\OneDrive - Danmarks Tekniske Universitet\code\system_optimization\data\MI_test\sec3"
+subfolder_path = r"C:\Users\madshv\OneDrive - Danmarks Tekniske Universitet\code\system_optimization\data\MI_test\altfiber_sec3"
 
 # Initialize an empty list to store loaded data
 dat_vec = []
@@ -27,25 +27,24 @@ dat_vec = []
 file_list = os.listdir(subfolder_path)
 
 # Iterate through the files and load .pkl files
-P0 = []
+param_sweep = []
 for file_name in file_list:
     if file_name.endswith(".pkl"):
         file_path = os.path.join(subfolder_path, file_name)
         with open(file_path, "rb") as pkl_file:
             data = pickle.load(pkl_file)
             dat_vec.append(data)
-            P0.append(int(file_name.split('.')[0].split('_')[1]))
-idx_sort = np.argsort(P0)
-P0 = np.array([P0[i] for i in idx_sort])
+            param_sweep.append(int(file_name.split('.')[0].split('_')[1]))
+idx_sort = np.argsort(param_sweep)
+param_sweep = np.array([param_sweep[i] for i in idx_sort])
 dat_vec = [dat_vec[i] for i in idx_sort]
 Nfile = len(dat_vec)
 
 # %% Post processing
-z = dat_vec[0]['z']
 t = dat_vec[0]['t']
 f = dat_vec[0]['f']
+z = dat_vec[0]['z']
 Fiber = dat_vec[0]['Fiber']
-L = dat_vec[0]['L']
 PSDnoise_dbmHz = dat_vec[0]['PSDnoise_dbmHz']
 
 dt = t[1]-t[0]
@@ -60,8 +59,14 @@ F,Z = np.meshgrid(f,z)
 SNR_vec = np.zeros([Nfile,Nz])
 P_inband_vec = np.zeros([Nfile,Nz])
 P_outband_vec = np.zeros([Nfile,Nz])
+E_vec = np.zeros([Nfile,Nz])
+z_vec = np.zeros([Nfile,Nz])
 for i in range(Nfile):
     A = dat_vec[i]['A']
+    L = dat_vec[i]['L']
+    z = dat_vec[i]['z']
+    z_vec[i] = z
+    
     AF = norm_fft(fftshift(fft(A,axis=0),axes=0),dt)       # Normalized such that |AF|^2=ESD and sum(|AF|^2)*df=sum(|A|^2)*dt
     PF_end = np.abs(AF[:,-1])**2
     Nav = 800
@@ -89,23 +94,32 @@ for i in range(Nfile):
 
     SNR_vec[i] = PSD_bril/PSD_rayscat
     
-    G = np.exp(Fiber.alpha[1]*L)
-    fac = 1.0*(z<L)+1/G*(z>L)*(z<2*L)+1/G**2*(z>2*L)
+    #G = np.exp(Fiber.alpha[1]*L)
+    G = np.exp(Fiber[0].alpha[1]*L[0]+Fiber[1].alpha[1]*L[1])
+    Ltot = np.sum(L)
+    fac = 1.0*(z<Ltot)+1/G*(z>Ltot)*(z<2*Ltot)+1/G**2*(z>2*Ltot)
     P_inband_vec[i] = np.sum(np.abs(AF)**2*fac*(np.abs(F.T)<0.1),axis=0)*df
     P_outband_vec[i] = np.sum(np.abs(AF)**2*fac*(np.abs(F.T)>0.1),axis=0)*df
     
+    E_vec[i] = np.sum(np.abs(A)**2,axis=0)*dt
 
 # %% Plotting
 plt.close('all')
 fig0,ax0 = plt.subplots(1,3,constrained_layout=True)
 for i in range(Nfile):
-    ax0[0].plot(z*1e-3,db(SNR_vec[i]))
+    ax0[0].plot(z_vec[i]*1e-3,db(SNR_vec[i]))
 ax0[0].set_ylabel('SNR (dB)')
 ax0[0].set_xlabel('z (km)')
-ax0[1].plot(P0,db(SNR_vec[:,-1]))
+ax0[1].plot(param_sweep,db(SNR_vec[:,-1]))
 ax0[1].set_xlabel('P0 (mW)')
 ax0[1].set_ylabel('SNR (dB)')
-ax0[2].plot(P0,db(P_inband_vec[:,-2]/P_outband_vec[:,-2]))
-ax0[2].set_xlabel('P0 (mW)')
-ax0[2].set_ylabel(r'$P_{inband}/P_{outband}$ (dB)')
+ax0[2].plot(param_sweep,dbm(P_inband_vec[:,-2]))
+ax0[2].set_xlabel(r'$P_0$')
+ax0[2].set_ylabel(r'$P_{inband}$ (dBm)')
+
+fig1,ax1 = plt.subplots(constrained_layout=True)
+for i in range(Nfile):
+    ax1.plot(z_vec[i]*1e-3,db(P_inband_vec[i]))
+
+
 # %%
