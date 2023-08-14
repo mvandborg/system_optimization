@@ -128,8 +128,10 @@ class Simulation_pulsed_single_fiber:
         self.C_loss = 4.5e-3
         self.T0 = 100       # NEEDS TO BE FIXED
         self.Lpulse = c/1.45*self.T0
-        self.C_rayscat = self.C_capture*self.C_loss*(self.Lpulse/2)    # Rayleigh scattering coefficient (unitless)
-        self.C_bril = 8e-9   # Brillouin scattering coefficient (unitless)
+        # Rayleigh scattering coefficient (unitless)
+        self.C_rayscat = self.C_capture*self.C_loss*(self.Lpulse/2)    
+        # Brillouin scattering coefficient (unitless)
+        self.C_bril = 8e-9   
         
         PSDnoise_WHz = inv_dbm(self.PSDnoise_dbmHz)              # Noise floor (W/Hz)
         PSDnoise_WGHz = PSDnoise_WHz*1e9                        # Noise floor (W/GHz)

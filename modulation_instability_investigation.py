@@ -21,11 +21,10 @@ from help_functions import dbm,db,inv_dbm,norm_fft, moving_average, lorentzian
 def A0_func(t,T0,Ppeak0):
     return sqrt(Ppeak0)*exp(-(2*t/T0)**22)
 
-L = 75e3                # Fiber length (km)
+L = 100e3                # Fiber length (km)
 T0 = 100                # Pulse length (ns)
 Ppeak0 = 300e-3         # Pump power (W)
-Fiber2 = Fiber_SumULL
-Fiber1 = Fiber_TWXL
+Fiber = Fiber_SumULL
 
 Tmax = T0*7             # Simulation window size (ns)
 N = 2**16
@@ -33,20 +32,19 @@ t = np.linspace(-Tmax/2,Tmax/2,N)
 Nz_save = 101
 A0 = A0_func(t,T0,Ppeak0)
 
-PSD_dbm_nm = -40
+PSD_dbm_nm = -25
 PSD_W_nm = inv_dbm(PSD_dbm_nm)
 PSD_W_m = PSD_W_nm*1e9   # convert nm to m
-PSD_W_Hz = PSD_W_m*(1.55e-6)**2/2e8 # convert dlam to df
+PSD_W_Hz = PSD_W_m*(1.55e-6)**2/3e8 # convert dlam to df
 PSD_dbm_Hz = dbm(PSD_W_Hz)
-PSDnoise_dbmHz = -141   # Noise floor (dBm/Hz)
+PSDnoise_dbmHz = PSD_dbm_Hz   # Noise floor (dBm/Hz)
 
 Nsec = 1
-L1 = 7e3
-L2 = 93e3
-S = Simulation_pulsed_sections2_fiber(t,A0,L1,L2,Nz_save,Fiber1,Fiber2,PSDnoise_dbmHz,Nsec)
+S = Simulation_pulsed_sections_fiber(t,A0,L,Nz_save,Fiber,PSDnoise_dbmHz,Nsec)
 
 
 # %% Run simulation
+
 z,A = S.run()
 
 # %% Post processing
@@ -65,13 +63,13 @@ ESD_rayscat = PF_end_smooth[idx_fbril]*S.C_rayscat    # ESD of rayleigh scatteri
 PSD_rayscat = ESD_rayscat/(Tmax*1e-9)               # PSD of rayleigh scattering (W/GHz)
 PSD_rayscat_dbmHz = dbm(PSD_rayscat*1e-9)
 
-ESD_bril = np.abs(AF[int(N/2),:])**2*S.C_bril           # ESD of Brillouin scattering (nJ/GHz)
-PSD_bril = ESD_bril/(Tmax*1e-9)                  # PSD of Brillouin scattering (W/GHz)
+ESD_bril = np.abs(AF[int(N/2),:])**2*S.C_bril           # Peak ESD of Brillouin scattering (nJ/GHz)
+PSD_bril = ESD_bril/(Tmax*1e-9)                         # Peak PSD of Brillouin scattering (W/GHz)
 PSD_bril_dbmHz = dbm(PSD_bril*1e-9)
 
 SNR = PSD_bril/PSD_rayscat
 
-Lf = lorentzian(S.f,11,50e-3)
+Lf = lorentzian(S.f_sh,11,50e-3)
 BF2 = []
 for i in range(AF.shape[-1]):
     BF2.append(convolve(Lf,np.abs(AF[:,i])**2,mode='same'))
@@ -130,9 +128,10 @@ ax3[2].set_ylabel(r'$P_{inband}/P_{outband}$ (dB)')
 ax3[2].set_xlabel('z (km)')
 
 fig4,ax4 = plt.subplots(constrained_layout=True)
-for i in [0,50,100,150,200,250,300]: 
-    ax4.plot(S.f_sh,BF2[i]/np.max(BF2[i]))
-ax4.set_xlim([-1+11,1+11])
+for i in np.arange(0,len(z),int(len(z)/5)): 
+    ax4.plot(S.f_sh,BF2[i]/np.max(BF2[i]),label=str(int(z[i]*1e-3))+" km")
 ax4.set_xlabel('Frequency (GHz)')
+ax4.set_xlim([11-0.3,11+0.3])
+ax4.legend()
 
 # %%
