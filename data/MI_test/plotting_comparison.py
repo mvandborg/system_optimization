@@ -55,5 +55,6 @@ for i in range(Nsubfold):
     y = dbm([r.P_inband[-2] for r in R])
     ax0[1].plot(param_vec,y)
     ax0[1].set_xlabel(r'$P_0$')
-    ax0[1].set_ylabel(r'$P_{inband}$ (dBm)')
+    ax0[1].set_ylabel(r'$P_{inband}$ (dBm) ')
+
 # %%
