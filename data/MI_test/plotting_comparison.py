@@ -7,13 +7,13 @@ sys.path.append(file_dir)
 sys.path.insert(0, 'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/code')
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 from data.MI_test.plotting import SignalAnalyzer,sort_res
 from help_functions import db,dbm
 from scipy.constants import c
-c = c*1e-9
+c = c*1e-9                      # Unit m/ns
 
 # %% Import and process data
-
 
 subfolder_path1 = r"C:\Users\madshv\OneDrive - Danmarks Tekniske Universitet\code\system_optimization\data\MI_test\sec1"
 subfolder_path2 = r"C:\Users\madshv\OneDrive - Danmarks Tekniske Universitet\code\system_optimization\data\MI_test\sec2"
@@ -44,17 +44,36 @@ for i in range(Nsubfold):
 
 # %% Plotting
 plt.close('all')
+
 fig0,ax0 = plt.subplots(1,2,constrained_layout=True)
 for i in range(Nsubfold):
     R = R_vec[i]
     param_vec = param_list_vec[i]
-    y = db([r.PSDbril_PSDmi_ratio[-1] for r in R])
-    ax0[0].plot(param_vec,y)
-    ax0[0].set_xlabel('P0 (mW)')
-    ax0[0].set_ylabel(r'$PSD_{bril}/PSD_{ray}$ (dB)')
-    y = dbm([r.P_inband[-2] for r in R])
-    ax0[1].plot(param_vec,y)
-    ax0[1].set_xlabel(r'$P_0$')
-    ax0[1].set_ylabel(r'$P_{inband}$ (dBm) ')
+    y = [r.PSD_rayscat_dbmHz[-1] for r in R]
+    ax0[0].plot(param_vec,y,label=f'Sec {subfolder_path_vec[i][-1]}')
+    y = [r.PSD_bril_dbmHz[-1] for r in R]
+    ax0[1].plot(param_vec,y,label=f'Sec {subfolder_path_vec[i][-1]}')
+ax0[0].grid()
+ax0[0].set_xlabel('P0 (mW)')
+ax0[0].set_ylabel(r'$PSD_{ray}$ (dBm/Hz)')
+ax0[1].grid()
+ax0[1].set_xlabel(r'$P_0$ (mW)')
+ax0[1].set_ylabel(r'$PSD_{bril}$ (dBm/Hz)')
+ax0[0].legend()
+ax0[1].legend()
 
+kvec = np.logspace(-4,0,5)
+kvec = np.concatenate([np.array([0]),kvec])
+fig1,ax1 = plt.subplots(1,3,constrained_layout=True)
+for isec in range(Nsubfold):
+    for ik in range(len(kvec)):
+        k = kvec[ik]
+        y = db([1/(1/r.PSDbril_PSDmi_ratio[-1]+k/r.PSD_bril[-1]) for r in R_vec[isec]])
+        ax1[isec].plot(param_list_vec[isec],y,label='B=%.1E'%k)
+        ax1[isec].set_title(f'Sec {subfolder_path_vec[isec][-1]}')
+        ax1[isec].set_xlim([0,410])
+    ax1[isec].grid()
+    ax1[isec].set_xlabel('P0 (mW)')
+    ax1[isec].set_ylabel(r'SNR (dB)')
+    ax1[isec].legend()
 # %%

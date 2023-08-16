@@ -15,16 +15,17 @@ from numpy.fft import fft,fftshift
 from scipy.signal import convolve
 from src.simulation_system import Simulation_pulsed_sections_fiber
 from src.simulation_system import Simulation_pulsed_sections2_fiber
-from help_functions import dbm,db,inv_dbm,norm_fft, moving_average, lorentzian
+from help_functions import dbm,db,inv_dbm,norm_fft, moving_average, lorentzian,PSD_dbmnm2dbmhz
+from help_functions import ESD_nJGHz_2_PSD_dbmHz
 
 # %% Define propagation fibers
 def A0_func(t,T0,Ppeak0):
     return sqrt(Ppeak0)*exp(-(2*t/T0)**22)
 
-L = 100e3                # Fiber length (km)
+L = 75e3                # Fiber length (km)
 T0 = 100                # Pulse length (ns)
-Ppeak0 = 300e-3         # Pump power (W)
-Fiber = Fiber_SumULL
+Ppeak0 = 230e-3         # Pump power (W)
+Fiber = Fiber_generic
 
 Tmax = T0*7             # Simulation window size (ns)
 N = 2**16
@@ -33,15 +34,10 @@ Nz_save = 101
 A0 = A0_func(t,T0,Ppeak0)
 
 PSD_dbm_nm = -25
-PSD_W_nm = inv_dbm(PSD_dbm_nm)
-PSD_W_m = PSD_W_nm*1e9   # convert nm to m
-PSD_W_Hz = PSD_W_m*(1.55e-6)**2/3e8 # convert dlam to df
-PSD_dbm_Hz = dbm(PSD_W_Hz)
-PSDnoise_dbmHz = PSD_dbm_Hz   # Noise floor (dBm/Hz)
+PSDnoise_dbmHz = PSD_dbmnm2dbmhz(PSD_dbm_nm,1550e-9)   # Noise floor (dBm/Hz)
 
-Nsec = 1
+Nsec = 3
 S = Simulation_pulsed_sections_fiber(t,A0,L,Nz_save,Fiber,PSDnoise_dbmHz,Nsec)
-
 
 # %% Run simulation
 
@@ -59,9 +55,10 @@ fbril = -11    # Target Brillouin frequency
 idx_fbril = np.argmin(np.abs(S.f_sh[Nav-1:]-fbril))
 
 # Divide by Tmax to convert from energy (ESD) to power (PSD)
-ESD_rayscat = PF_end_smooth[idx_fbril]*S.C_rayscat    # ESD of rayleigh scattering (nJ/GHz)
-PSD_rayscat = ESD_rayscat/(Tmax*1e-9)               # PSD of rayleigh scattering (W/GHz)
+ESD_rayscat = PF_end_smooth[idx_fbril]*S.C_rayscat      # ESD of rayleigh scattering (nJ/GHz)
+PSD_rayscat = ESD_rayscat/Tmax                          # PSD of rayleigh scattering (W/GHz)
 PSD_rayscat_dbmHz = dbm(PSD_rayscat*1e-9)
+PSD_rayscat_dbmHz1 = ESD_nJGHz_2_PSD_dbmHz(ESD_rayscat,Tmax)
 
 ESD_bril = np.abs(AF[int(N/2),:])**2*S.C_bril           # Peak ESD of Brillouin scattering (nJ/GHz)
 PSD_bril = ESD_bril/(Tmax*1e-9)                         # Peak PSD of Brillouin scattering (W/GHz)

@@ -12,7 +12,7 @@ import pickle
 from solver_system import System_solver_class,gnls1
 from scipy.constants import c
 from numpy import pi
-from help_functions import inv_dbm, inv_norm_fft, norm_fft
+from help_functions import inv_dbm, norm_fft, norm_ifft, PSD_dbmhz_2_ESD_nJGHz
 from numpy.fft import fft,ifft,fftfreq,fftshift
 c = c*1e-9              # Unit m/ns
 
@@ -133,16 +133,15 @@ class Simulation_pulsed_single_fiber:
         # Brillouin scattering coefficient (unitless)
         self.C_bril = 8e-9   
         
-        PSDnoise_WHz = inv_dbm(self.PSDnoise_dbmHz)              # Noise floor (W/Hz)
-        PSDnoise_WGHz = PSDnoise_WHz*1e9                        # Noise floor (W/GHz)
-        self.ESDnoise_JGHz = PSDnoise_WGHz*self.Tmax                  # Energy spectral density of the noise (nJ/GHz)
+        # Energy spectral density of the noise (nJ/GHz)
+        self.ESDnoise_nJGHz = PSD_dbmhz_2_ESD_nJGHz(self.PSDnoise_dbmHz)      
         
         self.theta_noise = pi*np.random.uniform(size=self.N)
-        self.ASDnoise = np.sqrt(self.ESDnoise_JGHz)*np.exp(1j*self.theta_noise)    # Amplitude spectral density (sqrt(nJ/Hz))
-        self.Anoise = ifft(inv_norm_fft(self.ASDnoise,self.dt))                 # Normalized such that |AF|^2=ESD and sum(|AF|^2)*df=sum(|A|^2)*dt
+        self.ASDnoise = np.sqrt(self.ESDnoise_nJGHz)*np.exp(1j*self.theta_noise)    # Amplitude spectral density (sqrt(nJ/Hz))
+        self.Anoise = norm_ifft(self.ASDnoise,self.dt)              # Normalized such that |AF|^2=ESD and sum(|AF|^2)*df=sum(|A|^2)*dt
 
         self.A0 = self.A0+self.Anoise
-        self.AF0 = norm_fft(fftshift(fft(self.A0)),self.dt)
+        self.AF0 = fftshift(norm_fft(self.A0,self.dt))
     
     def run(self):
         z,A = gnls1(self.t,self.omega,self.A0,self.L,self.Fiber,self.Nz_save)

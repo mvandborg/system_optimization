@@ -76,6 +76,18 @@ Fiber_Sum150 = Passivefiber_class(np.array([lam_p,lam_pr]),\
                            np.array([Aeff1,Aeff1]))
 Fiber_Sum150.add_raman(df_raman,gamma_raman/Aeff1)
 
+# Generic fiber
+alpha_db_p1 = 0.23         # Fiber loss (dB/km)
+alpha_db_pr1 = 0.20
+D_p1 = 13                   # GVD param (ps/(nm*km))
+D_pr1 = 17.27
+Aeff1 = 58e-12
+Fiber_generic = Passivefiber_class(np.array([lam_p,lam_pr]),\
+                           np.array([alpha_db_p1,alpha_db_pr1]),\
+                           np.array([D_p1,D_pr1]),\
+                           np.array([Aeff1,Aeff1]))
+Fiber_generic.add_raman(df_raman,gamma_raman/Aeff1)
+
 # Truewave XL
 alpha_db_p1 = 0.23         # Fiber loss (dB/km)
 alpha_db_pr1 = 0.20

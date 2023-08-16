@@ -7,7 +7,7 @@ sys.path.append(file_dir)
 sys.path.insert(0, 'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/code')
 import pickle
 import numpy as np
-from help_functions import norm_fft,moving_average,dbm,db
+from help_functions import norm_fft,norm_fft2d,moving_average,dbm,db,ESD2PSD
 from scipy.fft import fft,fftshift
 import matplotlib.pyplot as plt
 from scipy.constants import c
@@ -23,7 +23,7 @@ class SignalAnalyzer:
         self.analyze_data()
         
         # Delete variables after calculations to free up RAM
-        del self.A
+        #del self.A
         del self.Fiber
     
     def extract_data(self):
@@ -48,7 +48,7 @@ class SignalAnalyzer:
     
     def analyze_data(self):
         # fft: Normalized such that |AF|^2=ESD and sum(|AF|^2)*df=sum(|A|^2)*dt
-        AF = norm_fft(fftshift(fft(self.A,axis=0),axes=0),self.dt)
+        AF = norm_fft2d(self.A,self.dt,axis=0)
         Nav = 800
         self.PF_end_smooth = moving_average(np.abs(AF)**2,n=Nav)
 
@@ -63,14 +63,12 @@ class SignalAnalyzer:
         Lpulse = c/1.45*T0
         C_rayscat = C_capture*C_loss*(Lpulse/2)    # Rayleigh scattering coefficient (unitless)
         C_bril = 8e-9   # Brillouin scattering coefficient (unitless)
-        
-        self.ESD_rayscat = self.PF_end_smooth[idx_fbril]*C_rayscat            # ESD of rayleigh scattering (nJ/GHz)
-        self.PSD_rayscat = self.ESD_rayscat/(self.Tmax*1e-9)               # PSD of rayleigh scattering (W/GHz)
-        self.PSD_rayscat_dbmHz = dbm(self.PSD_rayscat*1e-9)
+                
+        self.ESD_rayscat = self.PF_end_smooth[idx_fbril]*C_rayscat              # ESD of rayleigh scattering (nJ/GHz)
+        self.PSD_rayscat = ESD2PSD(self.ESD_rayscat,self.Tmax)                  # PSD of rayleigh scattering (W/GHz)
 
-        self.ESD_bril = np.abs(AF[int(self.N/2),:])**2*C_bril           # ESD of Brillouin scattering (nJ/GHz)
-        self.PSD_bril = self.ESD_bril/(self.Tmax*1e-9)                  # PSD of Brillouin scattering (W/GHz)
-        self.PSD_bril_dbmHz = dbm(self.PSD_bril*1e-9)
+        self.ESD_bril = np.abs(AF[int(self.N/2),:])**2*C_bril                   # ESD of Brillouin scattering (nJ/GHz)
+        self.PSD_bril = ESD2PSD(self.ESD_bril,self.Tmax)                        # PSD of Brillouin scattering (W/GHz)
 
         self.PSDbril_PSDmi_ratio = self.PSD_bril/self.PSD_rayscat
         
@@ -79,10 +77,10 @@ class SignalAnalyzer:
         else:
             G = np.exp(self.Fiber[0].alpha[1]*self.L[0]+self.Fiber[1].alpha[1]*self.L[1])
         Ltot = np.sum(self.L)
-        fac = 1.0*(self.z<Ltot)+1/G*(self.z>Ltot)*(self.z<2*Ltot)+1/G**2*(self.z>2*Ltot)
+        self.fac = 1.0*(self.z<Ltot)+1/G*(self.z>Ltot)*(self.z<2*Ltot)+1/G**2*(self.z>2*Ltot)
         F = np.tile(self.f, (self.Nz, 1))
-        self.P_inband = np.sum(np.abs(AF)**2*fac*(np.abs(F.T)<0.1),axis=0)*self.df
-        self.P_outband = np.sum(np.abs(AF)**2*fac*(np.abs(F.T)>0.1),axis=0)*self.df
+        self.P_inband = np.sum(np.abs(AF)**2*(np.abs(F.T)<0.1),axis=0)*self.df
+        self.P_outband = np.sum(np.abs(AF)**2*(np.abs(F.T)>0.1),axis=0)*self.df
         
         self.E = np.sum(np.abs(self.A)**2,axis=0)*self.dt
     
@@ -104,21 +102,33 @@ def plotting():
 
     y = db([r.PSDbril_PSDmi_ratio[-1] for r in R])
     ax0[1].plot(param_vec,y)
-    ax0[1].set_xlabel('P0 (mW)')
+    #ax0[1].set_xlabel('P0 (mW)')
+    ax0[1].set_xlabel(r'$PSD_{noise}$ (dBm/Hz)')
     ax0[1].set_ylabel(r'$PSD_{bril}/PSD_{ray}$ (dB)')
+    ax0[1].grid()
     y = dbm([r.P_inband[-2] for r in R])
     ax0[3].plot(param_vec,y)
-    ax0[3].set_xlabel(r'$P_0$')
-    ax0[3].set_ylabel(r'$P_{inband}$ (dBm)')
+    #ax0[3].set_xlabel(r'$P_0$ (mW)')
+    ax0[3].set_xlabel(r'$PSD_{noise}$ (dBm/Hz)')
+    ax0[3].set_ylabel(r'$E_{inband}$ (dB)')
+    ax0[3].grid()
 
     fig1,ax1 = plt.subplots(constrained_layout=True)
     for i in range(Nfile):
         ax1.plot(R[i].z*1e-3,db(R[i].P_inband))
+    
+    AF_end = norm_fft(R[0].A[:,0],R[0].dt)
+    ESD_end = np.abs(AF_end)**2
+    fig2,ax2 = plt.subplots(constrained_layout=True)
+    ax2.plot(R[0].f,dbm(ESD_end))
+    ax2.set_xlabel('Frequency (GHz)')
+    ax2.set_ylabel('PSD')
 
 # %% Rune code
+
 if __name__ == '__main__':
     # Specify the path to the subfolder containing the .pkl files
-    subfolder_path = r"C:\Users\madshv\OneDrive - Danmarks Tekniske Universitet\code\system_optimization\data\MI_test\sec2"
+    subfolder_path = r"C:\Users\madshv\OneDrive - Danmarks Tekniske Universitet\code\system_optimization\data\MI_test\noise_level_sweep"
 
     # List all files in the subfolder
     file_list = os.listdir(subfolder_path)
@@ -134,8 +144,6 @@ if __name__ == '__main__':
     param_vec,R = sort_res(param_vec,R)
     
     plotting()
-
-
 
 
 
