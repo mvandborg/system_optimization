@@ -38,6 +38,7 @@ class SignalAnalyzer:
                 self.Fiber = data['Fiber']
                 self.PSDnoise_dbmHz = data['PSDnoise_dbmHz']
                 self.L = data['L']
+                self.PSDnoise_dbmGHz = self.PSDnoise_dbmHz+90
                 self.Nz = len(self.z)
                 self.dt = self.t[1]-self.t[0]
                 self.Tmax = self.t[-1]-self.t[0]
@@ -117,18 +118,22 @@ def plotting():
     for i in range(Nfile):
         ax1.plot(R[i].z*1e-3,db(R[i].P_inband))
     
-    AF_end = norm_fft(R[0].A[:,0],R[0].dt)
-    ESD_end = np.abs(AF_end)**2
+    
     fig2,ax2 = plt.subplots(constrained_layout=True)
-    ax2.plot(R[0].f,dbm(ESD_end))
-    ax2.set_xlabel('Frequency (GHz)')
-    ax2.set_ylabel('PSD')
+    for i in range(Nfile):
+        AF_end = norm_fft(R[i].A[:,-1],R[i].dt)
+        ESD_end = np.abs(AF_end)**2
+        PSD_end = ESD2PSD(ESD_end,R[i].Tmax)
+        ax2.plot(R[i].f*1550**2/3e8+1550,dbm(PSD_end)+i*100,label=f'Noise={R[i].PSDnoise_dbmGHz} dBm/GHz')
+        ax2.set_xlabel('Wavelength (nm)')
+        ax2.set_ylabel('PSD (dBm/GHz)')
+    ax2.legend()
 
 # %% Rune code
 
 if __name__ == '__main__':
     # Specify the path to the subfolder containing the .pkl files
-    subfolder_path = r"C:\Users\madshv\OneDrive - Danmarks Tekniske Universitet\code\system_optimization\data\MI_test\noise_level_sweep"
+    subfolder_path = r"C:\Users\madshv\OneDrive - Danmarks Tekniske Universitet\code\system_optimization\data\MI_test\sec1"
 
     # List all files in the subfolder
     file_list = os.listdir(subfolder_path)

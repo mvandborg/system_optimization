@@ -5,14 +5,6 @@ Created on Mon Jun 13 15:45:34 2022
 @author: madshv
 """
 
-from IPython import get_ipython
-get_ipython().magic('reset -sf')
-import os
-import sys
-file_dir = os.path.dirname(__file__)
-sys.path.append(file_dir)
-sys.path.insert(0, 'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/code')
-
 import numpy as np
 import matplotlib.pyplot as plt
 from help_functions import dbm

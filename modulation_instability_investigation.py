@@ -1,10 +1,5 @@
 
 # %% Import modules
-import sys
-import os
-file_dir = os.path.dirname(__file__)
-sys.path.append(file_dir)
-sys.path.insert(0, 'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/code')
 
 import numpy as np
 import pickle
@@ -15,17 +10,17 @@ from numpy.fft import fft,fftshift
 from scipy.signal import convolve
 from src.simulation_system import Simulation_pulsed_sections_fiber
 from src.simulation_system import Simulation_pulsed_sections2_fiber
-from help_functions import dbm,db,inv_dbm,norm_fft, moving_average, lorentzian,PSD_dbmnm2dbmhz
-from help_functions import ESD_nJGHz_2_PSD_dbmHz
+from help_functions import dbm,db,inv_dbm,norm_fft, moving_average, lorentzian,ESD2PSD,PSD_dbmnm2dbmGHz,PSD_dbmGHz2dbmnm
+from help_functions import norm_fft2d
 
 # %% Define propagation fibers
 def A0_func(t,T0,Ppeak0):
     return sqrt(Ppeak0)*exp(-(2*t/T0)**22)
 
-L = 75e3                # Fiber length (km)
+L = 100e3                # Fiber length (km)
 T0 = 100                # Pulse length (ns)
-Ppeak0 = 230e-3         # Pump power (W)
-Fiber = Fiber_generic
+Ppeak0 = 200e-3         # Pump power (W)
+Fiber = Fiber_Scuba150
 
 Tmax = T0*7             # Simulation window size (ns)
 N = 2**16
@@ -33,11 +28,11 @@ t = np.linspace(-Tmax/2,Tmax/2,N)
 Nz_save = 101
 A0 = A0_func(t,T0,Ppeak0)
 
-PSD_dbm_nm = -25
-PSDnoise_dbmHz = PSD_dbmnm2dbmhz(PSD_dbm_nm,1550e-9)   # Noise floor (dBm/Hz)
+PSD_dbm_nm = -30
+PSDnoise_dbmGHz = PSD_dbmnm2dbmGHz(PSD_dbm_nm,1550,3e8)   # Noise floor (dBm/Hz)
 
-Nsec = 3
-S = Simulation_pulsed_sections_fiber(t,A0,L,Nz_save,Fiber,PSDnoise_dbmHz,Nsec)
+Nsec = 1
+S = Simulation_pulsed_sections_fiber(t,A0,L,Nz_save,Fiber,PSDnoise_dbmGHz,Nsec)
 
 # %% Run simulation
 
@@ -45,7 +40,7 @@ z,A = S.run()
 
 # %% Post processing
 
-AF = norm_fft(fftshift(fft(A,axis=0),axes=0),S.dt)       # Normalized such that |AF|^2=ESD and sum(|AF|^2)*df=sum(|A|^2)*dt
+AF = norm_fft2d(A,S.dt,axis=0)       # Normalized such that |AF|^2=ESD and sum(|AF|^2)*df=sum(|A|^2)*dt
 PF_end = np.abs(AF[:,-1])**2
 Nav = 800
 PF_end_smooth = moving_average(np.abs(AF)**2,n=Nav)
@@ -56,13 +51,12 @@ idx_fbril = np.argmin(np.abs(S.f_sh[Nav-1:]-fbril))
 
 # Divide by Tmax to convert from energy (ESD) to power (PSD)
 ESD_rayscat = PF_end_smooth[idx_fbril]*S.C_rayscat      # ESD of rayleigh scattering (nJ/GHz)
-PSD_rayscat = ESD_rayscat/Tmax                          # PSD of rayleigh scattering (W/GHz)
-PSD_rayscat_dbmHz = dbm(PSD_rayscat*1e-9)
-PSD_rayscat_dbmHz1 = ESD_nJGHz_2_PSD_dbmHz(ESD_rayscat,Tmax)
+PSD_rayscat = ESD2PSD(ESD_rayscat,Tmax)                          # PSD of rayleigh scattering (W/GHz)
+PSD_rayscat_dbmHz = dbm(PSD_rayscat)-90
 
 ESD_bril = np.abs(AF[int(N/2),:])**2*S.C_bril           # Peak ESD of Brillouin scattering (nJ/GHz)
-PSD_bril = ESD_bril/(Tmax*1e-9)                         # Peak PSD of Brillouin scattering (W/GHz)
-PSD_bril_dbmHz = dbm(PSD_bril*1e-9)
+PSD_bril = ESD2PSD(ESD_bril,Tmax)                        # Peak PSD of Brillouin scattering (W/GHz)
+PSD_bril_dbmHz = dbm(PSD_bril)-90
 
 SNR = PSD_bril/PSD_rayscat
 
@@ -130,5 +124,7 @@ for i in np.arange(0,len(z),int(len(z)/5)):
 ax4.set_xlabel('Frequency (GHz)')
 ax4.set_xlim([11-0.3,11+0.3])
 ax4.legend()
+
+plt.show()
 
 # %%

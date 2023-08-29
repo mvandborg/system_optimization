@@ -4,15 +4,12 @@ Created on Wed Aug 24 11:47:10 2022
 
 @author: madshv
 """
-import sys
-sys.path.insert(0, 'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/code/system_optimization/src')
-sys.path.insert(0, 'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/code')
 import numpy as np
 import pickle
-from solver_system import System_solver_class,gnls1
+from .solver_system import System_solver_class,gnls1
 from scipy.constants import c
 from numpy import pi
-from help_functions import inv_dbm, norm_fft, norm_ifft, PSD_dbmhz_2_ESD_nJGHz
+from help_functions import inv_dbm, norm_fft, norm_ifft, PSD2ESD,PSD_dbmGHz2dbmnm
 from numpy.fft import fft,ifft,fftfreq,fftshift
 c = c*1e-9              # Unit m/ns
 
@@ -103,7 +100,7 @@ class System_simulation_pulsed_class(System_simulation_class):
         
 # Class of single fiber propagation for MI investigation
 class Simulation_pulsed_single_fiber:
-    def __init__(self,t,A0,L,Nz_save,Fiber,PSDnoise_dbmHz):
+    def __init__(self,t,A0,L,Nz_save,Fiber,PSDnoise_dbmGHz):
         self.t = t
         self.A0 = A0
         self.L = L
@@ -112,8 +109,10 @@ class Simulation_pulsed_single_fiber:
         self.A0 = A0
         self.Nz_save = Nz_save
         self.Fiber = Fiber
-        self.PSDnoise_dbmHz = PSDnoise_dbmHz
-                
+        self.PSDnoise_dbmGHz = PSDnoise_dbmGHz
+        self.PSDnoise_dbmHz = PSDnoise_dbmGHz-90
+        self.PSDnoise_dbmnm = PSD_dbmGHz2dbmnm(PSDnoise_dbmGHz,1550,3e8)
+        
         self.dt = self.Tmax/self.N
         self.fsam = 1/self.dt         # Sampling frequency (GHz)
         self.fnyq = self.fsam/2
@@ -134,14 +133,15 @@ class Simulation_pulsed_single_fiber:
         self.C_bril = 8e-9   
         
         # Energy spectral density of the noise (nJ/GHz)
-        self.ESDnoise_nJGHz = PSD_dbmhz_2_ESD_nJGHz(self.PSDnoise_dbmHz)      
+        self.ESDnoise_nJGHz = PSD2ESD(inv_dbm(self.PSDnoise_dbmGHz),self.Tmax)     
+        print(self.ESDnoise_nJGHz) 
         
         self.theta_noise = pi*np.random.uniform(size=self.N)
-        self.ASDnoise = np.sqrt(self.ESDnoise_nJGHz)*np.exp(1j*self.theta_noise)    # Amplitude spectral density (sqrt(nJ/Hz))
+        self.ASDnoise = np.sqrt(self.ESDnoise_nJGHz)*np.exp(1j*self.theta_noise)    # Amplitude spectral density (sqrt(nJ/GHz))
         self.Anoise = norm_ifft(self.ASDnoise,self.dt)              # Normalized such that |AF|^2=ESD and sum(|AF|^2)*df=sum(|A|^2)*dt
 
         self.A0 = self.A0+self.Anoise
-        self.AF0 = fftshift(norm_fft(self.A0,self.dt))
+        self.AF0 = norm_fft(self.A0,self.dt)
     
     def run(self):
         z,A = gnls1(self.t,self.omega,self.A0,self.L,self.Fiber,self.Nz_save)
@@ -155,10 +155,11 @@ class Simulation_pulsed_single_fiber:
             "z":self.z,
             "f":self.f_sh,
             "t":self.t,
-            "Fiber":self.Fiber,
+            "Fiber name":self.Fiber.name,
             "L":self.L,
             "T0":self.T0,
             "PSDnoise_dbmHz":self.PSDnoise_dbmHz,
+            "PSDnoise_dbmGHz":self.PSDnoise_dbmGHz
         }
         with open(filedir+'/'+filename, "wb") as f:
             pickle.dump(savedict, f)

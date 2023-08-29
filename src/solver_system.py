@@ -4,6 +4,7 @@ Created on Wed Aug 24 13:36:27 2022
 
 @author: madshv
 """
+# Insert path to the erbium model
 import sys
 sys.path.insert(0, 'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/code')
 import numpy as np

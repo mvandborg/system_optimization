@@ -62,14 +62,16 @@ data_sim = np.load(simdir+'/200km/simulation_asenoise.npy',allow_pickle=True)
 Nsim = len(data_sim[0])
 
 BWnoise = data_sim[6]
+BWnoise_lam = data_sim[7]
 lamnoise = data_sim[3]
 idxlamnoise= np.argmin(lamnoise*1e6<1.55)
 Sase_bw = []
 Sase_bw_1550 = []
 for i in range(Nsim):
-    Sase_bw_tmp = data_sim[5][i][:,0]/BWnoise
+    Pnoisebw = data_sim[5][i][:,0]
+    Sase_bw_tmp = Pnoisebw/BWnoise_lam*1e-9
     Sase_bw.append( Sase_bw_tmp )
-    Sase_bw_1550.append( Sase_bw_tmp[idxlamnoise]*1e18)
+    Sase_bw_1550.append( Sase_bw_tmp[idxlamnoise])
 Sase_bw_1550 = np.array(Sase_bw_1550)
 
 # %% plotting

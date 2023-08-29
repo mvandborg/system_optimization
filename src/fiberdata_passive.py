@@ -10,7 +10,7 @@ from scipy.constants import c
 c = c*1e-9              # Unit m/ns
 
 class Passivefiber_class:
-    def __init__(self,lam,alpha_db=0.2,D=17,Aeff=80,vg=c/1.45):
+    def __init__(self,lam,alpha_db=0.2,D=17,Aeff=80,vg=c/1.45,name='NA'):        
         self.n2 = 2.6e-20                       # Nonlinear coefficient m2/W  
         
         self.lam = lam                          # Wavelengths (m)

@@ -1,16 +1,10 @@
 
 
 # %% Import modules
-import sys
-import os
 import time
 import multiprocessing
-file_dir = os.path.dirname(__file__)
-sys.path.append(file_dir)
-sys.path.insert(0, 'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/code')
 
 import numpy as np
-import pickle
 from numpy import sqrt,exp
 import matplotlib.pyplot as plt
 from physical_parameters import *

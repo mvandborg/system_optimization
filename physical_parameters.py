@@ -5,6 +5,12 @@ Created on Wed Aug 24 15:39:11 2022
 @author: madshv
 """
 
+# %% Imports
+
+# Import path to erbium model
+import sys
+sys.path.insert(0, 'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/code')
+
 from scipy.constants import c
 from numpy import pi
 import numpy as np
@@ -40,6 +46,21 @@ df_raman = f_p-f_pr
 
 # Define fiber parameters
 
+# Generic fiber
+alpha_db_p1 = 0.23         # Fiber loss (dB/km)
+alpha_db_pr1 = 0.20
+D_p1 = 13                   # GVD param (ps/(nm*km))
+D_pr1 = 17.27
+Aeff1 = 85e-12
+Fiber_generic = Passivefiber_class(
+                            np.array([lam_p,lam_pr]),
+                            np.array([alpha_db_p1,alpha_db_pr1]),
+                            np.array([D_p1,D_pr1]),
+                            np.array([Aeff1,Aeff1]),
+                            name = 'Generic'
+                            )
+Fiber_generic.add_raman(df_raman,gamma_raman/Aeff1)
+
 # Sumitomo Z Fiber LL
 alpha_db_p1 = 0.195         # Fiber loss (dB/km)
 alpha_db_pr1 = 0.161
@@ -49,7 +70,8 @@ Aeff1 = 85e-12
 Fiber_SumLL = Passivefiber_class(np.array([lam_p,lam_pr]),\
                            np.array([alpha_db_p1,alpha_db_pr1]),\
                            np.array([D_p1,D_pr1]),\
-                           np.array([Aeff1,Aeff1]))
+                           np.array([Aeff1,Aeff1]),
+                           name = 'Sumitomo Z LL')
 Fiber_SumLL.add_raman(df_raman,gamma_raman/Aeff1)
     
 # Sumitomo Z-PLUS Fiber ULL
@@ -61,7 +83,8 @@ Aeff1 = 112e-12
 Fiber_SumULL = Passivefiber_class(np.array([lam_p,lam_pr]),\
                            np.array([alpha_db_p1,alpha_db_pr1]),\
                            np.array([D_p1,D_pr1]),\
-                           np.array([Aeff1,Aeff1]))
+                           np.array([Aeff1,Aeff1]),
+                           name = 'Sumitomo Z-PLUS ULL')
 Fiber_SumULL.add_raman(df_raman,gamma_raman/Aeff1)
     
 # Sumitomo Z-PLUS Fiber 150
@@ -73,22 +96,24 @@ Aeff1 = 150e-12
 Fiber_Sum150 = Passivefiber_class(np.array([lam_p,lam_pr]),\
                            np.array([alpha_db_p1,alpha_db_pr1]),\
                            np.array([D_p1,D_pr1]),\
-                           np.array([Aeff1,Aeff1]))
+                           np.array([Aeff1,Aeff1]),
+                           name = 'Sumitomo Z-PLUS 150')
 Fiber_Sum150.add_raman(df_raman,gamma_raman/Aeff1)
 
-# Generic fiber
-alpha_db_p1 = 0.23         # Fiber loss (dB/km)
-alpha_db_pr1 = 0.20
-D_p1 = 13                   # GVD param (ps/(nm*km))
-D_pr1 = 17.27
-Aeff1 = 58e-12
-Fiber_generic = Passivefiber_class(np.array([lam_p,lam_pr]),\
+# OFS Scuba 150
+alpha_db_p1 = 0.180         # Fiber loss (dB/km)
+alpha_db_pr1 = 0.150
+D_p1 = 17                   # GVD param (ps/(nm*km))
+D_pr1 = 21
+Aeff1 = 153e-12
+Fiber_Scuba150 = Passivefiber_class(np.array([lam_p,lam_pr]),\
                            np.array([alpha_db_p1,alpha_db_pr1]),\
                            np.array([D_p1,D_pr1]),\
-                           np.array([Aeff1,Aeff1]))
-Fiber_generic.add_raman(df_raman,gamma_raman/Aeff1)
+                           np.array([Aeff1,Aeff1]),
+                           name = 'OFS Scuba150')
+Fiber_Scuba150.add_raman(df_raman,gamma_raman/Aeff1)
 
-# Truewave XL
+# OFS Truewave XL
 alpha_db_p1 = 0.23         # Fiber loss (dB/km)
 alpha_db_pr1 = 0.20
 D_p1 = -11                   # GVD param (ps/(nm*km))
@@ -97,7 +122,8 @@ Aeff1 = 72e-12
 Fiber_TWXL = Passivefiber_class(np.array([lam_p,lam_pr]),\
                            np.array([alpha_db_p1,alpha_db_pr1]),\
                            np.array([D_p1,D_pr1]),\
-                           np.array([Aeff1,Aeff1]))
+                           np.array([Aeff1,Aeff1]),
+                           name = 'Sumitomo Truewave XL')
 Fiber_TWXL.add_raman(df_raman,gamma_raman/Aeff1)
 
 dir_edf = r'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/fiber_data/ofs_edf/'
