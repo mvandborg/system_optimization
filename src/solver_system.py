@@ -6,7 +6,10 @@ Created on Wed Aug 24 13:36:27 2022
 """
 # Insert path to the erbium model
 import sys
-sys.path.insert(0, 'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/code')
+import os
+code_path = os.environ.get('CODE_PATH', 
+                           'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/code')
+sys.path.insert(0, code_path)
 import numpy as np
 from numpy import exp
 from scipy.integrate import solve_ivp,simpson
