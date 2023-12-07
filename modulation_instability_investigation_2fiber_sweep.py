@@ -11,7 +11,7 @@ from physical_parameters import *
 from numpy.fft import fft,fftshift
 from scipy.signal import convolve
 from src.simulation_system import Simulation_pulsed_sections2_fiber
-from help_functions import dbm,db,norm_fft, moving_average, lorentzian
+from src.help_functions import dbm,db,norm_fft, moving_average, lorentzian
 
 # %% Define propagation fibers
 def A0_func(t,T0,Ppeak0):
@@ -33,7 +33,7 @@ Nsec = 3
 step_sweep = 5
 PSDnoise_dbmHz_vec = -141
 
-L1_vec = np.arange(0,75,10)*1e3
+L1_vec = np.arange(1,74,5)*1e3
 L2_vec = L-L1_vec
 
 N_sweep = len(L1_vec)
@@ -44,7 +44,6 @@ savedir = r'C:\Users\madshv\OneDrive - Danmarks Tekniske Universitet\code\system
 def sim_func(args):
     i, Ppeak0, t, T0, L1, L2, Nz_save, Fiber1, Fiber2, PSDnoise_dbmHz, Nsec, savedir = args
     print('Start:\t Simulation no. '+str(i))
-    print(L1,L2)
     start_time = time.time()
     A0 = A0_func(t, T0, Ppeak0)
     S = Simulation_pulsed_sections2_fiber(t, A0, L1, L2, Nz_save, Fiber1, Fiber2, 
@@ -59,6 +58,8 @@ def sim_func(args):
 if __name__ == '__main__':
     args_list = [(i, Ppeak0, t, T0, L1_vec[i],L2_vec[i], Nz_save, Fiber1,Fiber2, 
                   PSDnoise_dbmHz_vec, Nsec, savedir) for i in range(N_sweep)]
+    #for args in args_list:
+    #    sim_func(args)
     with multiprocessing.Pool() as pool:
         pool.map(sim_func, args_list)
                  

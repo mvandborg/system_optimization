@@ -46,7 +46,7 @@ def Apr0_func(t,T0pr,Ppr0):
     #return z**0*t**0*sqrt(Ppr0)
     #return sqrt(Ppr0)*(H00*H01+H1n*H1p*(-1/DT*(t-(T0pr+DT)/2))+H0n*H0p*(1/DT*(t+(T0pr-DT)/2)))
 
-    return sqrt(Ppr0)*exp(-(2*t/T0pr)**2)
+    return sqrt(Ppr0)*exp(-(2*t/T0pr)**22)
 
 # Physical parameters
 Pp0 = 1e-6             # CW pump power (W)

@@ -10,8 +10,8 @@ from numpy.fft import fft,fftshift
 from scipy.signal import convolve
 from src.simulation_system import Simulation_pulsed_sections_fiber
 from src.simulation_system import Simulation_pulsed_sections2_fiber
-from help_functions import dbm,db,inv_dbm,norm_fft, moving_average, lorentzian,ESD2PSD,PSD_dbmnm2dbmGHz,PSD_dbmGHz2dbmnm
-from help_functions import norm_fft2d
+from src.help_functions import dbm,db,inv_dbm,norm_fft, moving_average, lorentzian,ESD2PSD,PSD_dbmnm2dbmGHz,PSD_dbmGHz2dbmnm
+from src.help_functions import norm_fft2d
 
 # %% Define propagation fibers
 def A0_func(t,T0,Ppeak0):
@@ -19,7 +19,7 @@ def A0_func(t,T0,Ppeak0):
 
 L = 100e3                # Fiber length (km)
 T0 = 100                # Pulse length (ns)
-Ppeak0 = 200e-3         # Pump power (W)
+Ppeak0 = 250e-3         # Pump power (W)
 Fiber = Fiber_Scuba150
 
 Tmax = T0*7             # Simulation window size (ns)

@@ -7,7 +7,7 @@ sys.path.append(file_dir)
 sys.path.insert(0, 'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/code')
 import pickle
 import numpy as np
-from help_functions import norm_fft,norm_fft2d,moving_average,dbm,db,ESD2PSD
+from src.help_functions import norm_fft,norm_fft2d,moving_average,dbm,db,ESD2PSD
 from scipy.fft import fft,fftshift
 import matplotlib.pyplot as plt
 from scipy.constants import c
@@ -24,18 +24,18 @@ class SignalAnalyzer:
         
         # Delete variables after calculations to free up RAM
         #del self.A
-        del self.Fiber
+        del self.Fiber_dict
     
     def extract_data(self):
         if self.file_name.endswith(".pkl"):
             file_path = os.path.join(self.subfolder_path, self.file_name)
             with open(file_path, "rb") as pkl_file:
                 data = pickle.load(pkl_file)
+                self.Fiber_dict = data['Fiber_dict']
                 self.t = data['t']
                 self.f = data['f']
                 self.z = data['z']
                 self.A = data['A']
-                self.Fiber = data['Fiber']
                 self.PSDnoise_dbmHz = data['PSDnoise_dbmHz']
                 self.L = data['L']
                 self.PSDnoise_dbmGHz = self.PSDnoise_dbmHz+90
@@ -73,10 +73,11 @@ class SignalAnalyzer:
 
         self.PSDbril_PSDmi_ratio = self.PSD_bril/self.PSD_rayscat
         
-        if isinstance(self.Fiber,list)==False:
-            G = np.exp(self.Fiber.alpha[1]*self.L)
-        else:
-            G = np.exp(self.Fiber[0].alpha[1]*self.L[0]+self.Fiber[1].alpha[1]*self.L[1])
+        if isinstance(self.Fiber_dict,list)==False:
+            G = np.exp(self.Fiber_dict['alpha'][1]*self.L)
+        # Else statement to be done later
+        #else:
+        #    G = np.exp(self.Fiber[0].alpha[1]*self.L[0]+self.Fiber[1].alpha[1]*self.L[1])
         Ltot = np.sum(self.L)
         self.fac = 1.0*(self.z<Ltot)+1/G*(self.z>Ltot)*(self.z<2*Ltot)+1/G**2*(self.z>2*Ltot)
         F = np.tile(self.f, (self.Nz, 1))
@@ -128,12 +129,14 @@ def plotting():
         ax2.set_xlabel('Wavelength (nm)')
         ax2.set_ylabel('PSD (dBm/GHz)')
     ax2.legend()
+    
+    plt.show()
 
 # %% Rune code
 
 if __name__ == '__main__':
     # Specify the path to the subfolder containing the .pkl files
-    subfolder_path = r"C:\Users\madshv\OneDrive - Danmarks Tekniske Universitet\code\system_optimization\data\MI_test\sec1"
+    subfolder_path = r"C:\Users\madshv\OneDrive - Danmarks Tekniske Universitet\code\system_optimization\data\MI_test\altfiber_sec1"
 
     # List all files in the subfolder
     file_list = os.listdir(subfolder_path)

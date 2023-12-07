@@ -150,17 +150,30 @@ class Simulation_pulsed_single_fiber:
         return z,A
 
     def save_pickle(self,filedir,filename):
-        savedict = {
-            "A":self.A,
-            "z":self.z,
-            "f":self.f_sh,
-            "t":self.t,
-            "Fiber name":self.Fiber.name,
-            "L":self.L,
-            "T0":self.T0,
-            "PSDnoise_dbmHz":self.PSDnoise_dbmHz,
-            "PSDnoise_dbmGHz":self.PSDnoise_dbmGHz
-        }
+        if type(self.Fiber)==list:
+            savedict = {
+                "Fiber_dict":[x.__dict__ for x in self.Fiber],
+                "A":self.A,
+                "z":self.z,
+                "f":self.f_sh,
+                "t":self.t,
+                "L":self.L,
+                "T0":self.T0,
+                "PSDnoise_dbmHz":self.PSDnoise_dbmHz,
+                "PSDnoise_dbmGHz":self.PSDnoise_dbmGHz
+                }
+        else:
+            savedict = {
+                "Fiber_dict":self.Fiber.__dict__,
+                "A":self.A,
+                "z":self.z,
+                "f":self.f_sh,
+                "t":self.t,
+                "L":self.L,
+                "T0":self.T0,
+                "PSDnoise_dbmHz":self.PSDnoise_dbmHz,
+                "PSDnoise_dbmGHz":self.PSDnoise_dbmGHz
+                }
         with open(filedir+'/'+filename, "wb") as f:
             pickle.dump(savedict, f)
         
