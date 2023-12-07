@@ -6,3 +6,4 @@
 *.npy
 data/
 .vscode/
+*.sh
