@@ -5,12 +5,11 @@ import os
 import sys
 file_dir = os.path.dirname(__file__)
 sys.path.append(file_dir)
-sys.path.append('C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/code')
 
 import numpy as np
 import matplotlib.pyplot as plt
 from plotting import SignalAnalyzer,sort_res
-from help_functions import db,dbm,PSD_dbmGHz2dbmnm
+from src.help_functions import db,dbm,PSD_dbmGHz2dbmnm
 from scipy.constants import c
 c = c*1e-9                      # Unit m/ns
 

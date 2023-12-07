@@ -6,17 +6,14 @@ Created on Wed Aug 24 15:55:39 2022
 """
 # %%
 
-from IPython import get_ipython
-get_ipython().magic('reset -sf')
 import os
 import sys
 file_dir = os.path.dirname(__file__)
 sys.path.append(file_dir)
-sys.path.insert(0, 'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/code')
 
 import numpy as np
 import matplotlib.pyplot as plt
-from help_functions import dbm,inv_dbm
+from src.help_functions import dbm,inv_dbm
 from scipy.optimize import minimize,Bounds
 from src.simulation_system import System_simulation_class
 

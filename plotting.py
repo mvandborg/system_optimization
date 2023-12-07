@@ -4,7 +4,7 @@ import os
 import sys
 file_dir = os.path.dirname(__file__)
 sys.path.append(file_dir)
-sys.path.insert(0, 'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/code')
+
 import pickle
 import numpy as np
 from src.help_functions import norm_fft,norm_fft2d,moving_average,dbm,db,ESD2PSD

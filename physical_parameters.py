@@ -8,14 +8,10 @@ Created on Wed Aug 24 15:39:11 2022
 # %% Imports
 
 # Import path to erbium model
-import sys
-sys.path.insert(0, 'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/code')
-
 from scipy.constants import c
 from numpy import pi
 import numpy as np
 from src.fiberdata_passive import Passivefiber_class
-from erbium_model.src.fiberdata_erbium import Erbiumfiber_class
 c = c*1e-9              # Unit m/ns
 
 # Define physical parameters
@@ -125,8 +121,9 @@ Fiber_TWXL = Passivefiber_class(np.array([lam_p,lam_pr]),\
                            np.array([Aeff1,Aeff1]),
                            name = 'Sumitomo Truewave XL')
 Fiber_TWXL.add_raman(df_raman,gamma_raman/Aeff1)
-
+"""
 dir_edf = r'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/fiber_data/ofs_edf/'
 file_edf = r'LP980_22841_labversion.s'
 #'LP980_22841_labversion','LP980_11841'
 Fiber_edf = Erbiumfiber_class.from_ofs_files(dir_edf, file_edf)
+"""
