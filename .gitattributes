@@ -1,0 +1,2 @@
+data/MI_test/sec3/*.pkl filter=lfs diff=lfs merge=lfs -text
+data/MI_test/*/*.pkl filter=lfs diff=lfs merge=lfs -text
