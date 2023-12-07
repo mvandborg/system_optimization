@@ -179,8 +179,8 @@ class Simulation_pulsed_single_fiber:
         
 # Class of multiple section fiber propagation for MI investigation
 class Simulation_pulsed_sections_fiber(Simulation_pulsed_single_fiber):
-    def __init__(self,t,A0,L,Nz_save,Fiber,PSDnoise_dbmHz,Nsec):
-        super().__init__(t,A0,L,Nz_save,Fiber,PSDnoise_dbmHz)
+    def __init__(self,t,A0,L,Nz_save,Fiber,PSDnoise_dbmGHz,Nsec):
+        super().__init__(t,A0,L,Nz_save,Fiber,PSDnoise_dbmGHz)
         self.Nsec = Nsec
     
     def run(self):

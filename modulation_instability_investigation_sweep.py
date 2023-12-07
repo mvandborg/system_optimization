@@ -5,29 +5,28 @@ import multiprocessing
 import numpy as np
 from numpy import sqrt,exp
 from physical_parameters import *
-from numpy.fft import fft,fftshift
-from scipy.signal import convolve
 from src.simulation_system import Simulation_pulsed_sections_fiber
-from src.help_functions import dbm,db,norm_fft, moving_average, lorentzian
+from src.help_functions import PSD_dbmGHz2dbmnm, PSD_dbmnm2dbmGHz
 
 # %% Define propagation fibers
 def A0_func(t,T0,Ppeak0):
     return sqrt(Ppeak0)*exp(-(2*t/T0)**22)
 
 # Directory for saving the data
-savedir = r'C:\Users\madshv\OneDrive - Danmarks Tekniske Universitet\code\system_optimization\data\MI_test\noise_level_sweep'
+savedir = r'C:\Users\madshv\OneDrive - Danmarks Tekniske Universitet\code\system_optimization\data\MI_test\sec3'
 
 L = 100e3                # Fiber length (km)
 T0 = 100                # Pulse length (ns)
-Fiber = Fiber_SumULL
+Fiber = Fiber_Scuba150
 #Ppeak0 = 150e-3
-PSDnoise_dbmGHz = -141+90   # Noise floor (dBm/Hz)
+PSD_noise_dbmnm = -30
+PSDnoise_dbmGHz = PSD_dbmnm2dbmGHz(PSD_noise_dbmnm,1550,2.99e8)
 
 Tmax = T0*7             # Simulation window size (ns)
 N = 2**16
 t = np.linspace(-Tmax/2,Tmax/2,N)
 Nz_save = 21
-Nsec = 1
+Nsec = 3
 
 step_sweep = 5
 Ppeak0_vec = np.arange(10,120,step_sweep)*1e-3      # Pump power (W)
