@@ -121,8 +121,9 @@ Fiber_TWXL = Passivefiber_class(np.array([lam_p,lam_pr]),\
                            np.array([Aeff1,Aeff1]),
                            name = 'Sumitomo Truewave XL')
 Fiber_TWXL.add_raman(df_raman,gamma_raman/Aeff1)
+
 """
-dir_edf = r'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/fiber_data/ofs_edf/'
+dir_edf = r'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/'
 file_edf = r'LP980_22841_labversion.s'
 #'LP980_22841_labversion','LP980_11841'
 Fiber_edf = Erbiumfiber_class.from_ofs_files(dir_edf, file_edf)

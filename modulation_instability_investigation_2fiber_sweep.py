@@ -18,7 +18,7 @@ L = 75e3                # Fiber length (km)
 T0 = 100                # Pulse length (ns)
 Fiber1 = Fiber_TWXL
 Fiber2 = Fiber_Scuba150
-Ppeak0 = 350e-3
+Ppeak0 = 100e-3
 PSD_noise_dbmnm = -30
 PSDnoise_dbmGHz = PSD_dbmnm2dbmGHz(PSD_noise_dbmnm,1550,2.99e8)
 
@@ -26,7 +26,7 @@ Tmax = T0*7             # Simulation window size (ns)
 N = 2**16
 t = np.linspace(-Tmax/2,Tmax/2,N)
 Nz_save = 21
-Nsec = 1
+Nsec = 3
 
 L1_vec = np.arange(1,74,5)*1e3
 L2_vec = L-L1_vec
@@ -34,7 +34,7 @@ L2_vec = L-L1_vec
 N_sweep = len(L1_vec)
 
 # %% Run simulation
-savedir = r'C:\Users\madshv\OneDrive - Danmarks Tekniske Universitet\code\system_optimization\data\MI_test\altfiber_sec1\P350'
+savedir = r'/zhome/86/3/117435/phd/system_optimization/data/MI_test/altfiber_sec3/P100'
 
 def sim_func(args):
     i, Ppeak0, t, T0, L1, L2, Nz_save, Fiber1, Fiber2, PSDnoise_dbmGHz, Nsec, savedir = args

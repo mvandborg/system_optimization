@@ -26,7 +26,7 @@ import matplotlib.pyplot as plt
 from erbium_model.src.fiberdata_erbium import Erbiumfiber_class
 from erbium_model.src.simulation_erbium import Erbium_simulation_class
 from src.fiberdata_passive import Passivefiber_class
-from help_functions import dbm,inv_dbm
+from src.help_functions import dbm,inv_dbm
 from src.solver_system import gnls,prop_EDF
 from physical_parameters import *
 c = c*1e-9              # Unit m/ns
