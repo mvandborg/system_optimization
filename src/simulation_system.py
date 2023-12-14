@@ -9,7 +9,7 @@ import pickle
 from .solver_system import System_solver_class,gnls1
 from scipy.constants import c
 from numpy import pi
-from help_functions import inv_dbm, norm_fft, norm_ifft, PSD2ESD,PSD_dbmGHz2dbmnm
+from .help_functions import inv_dbm, norm_fft, norm_ifft, PSD2ESD,PSD_dbmGHz2dbmnm
 from numpy.fft import fft,ifft,fftfreq,fftshift
 c = c*1e-9              # Unit m/ns
 
@@ -133,8 +133,7 @@ class Simulation_pulsed_single_fiber:
         self.C_bril = 8e-9   
         
         # Energy spectral density of the noise (nJ/GHz)
-        self.ESDnoise_nJGHz = PSD2ESD(inv_dbm(self.PSDnoise_dbmGHz),self.Tmax)     
-        print(self.ESDnoise_nJGHz) 
+        self.ESDnoise_nJGHz = PSD2ESD(inv_dbm(self.PSDnoise_dbmGHz),self.Tmax)
         
         self.theta_noise = pi*np.random.uniform(size=self.N)
         self.ASDnoise = np.sqrt(self.ESDnoise_nJGHz)*np.exp(1j*self.theta_noise)    # Amplitude spectral density (sqrt(nJ/GHz))

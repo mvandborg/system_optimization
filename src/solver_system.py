@@ -7,9 +7,11 @@ Created on Wed Aug 24 13:36:27 2022
 # Insert path to the erbium model
 import sys
 import os
-code_path = os.environ.get('CODE_PATH', 
-                           'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/code')
-sys.path.insert(0, code_path)
+from .help_functions import load_config
+sys.path.insert(0, load_config().get('erbium_model_path', 'default_value_if_not_set'))
+
+print(sys.path)
+
 import numpy as np
 from numpy import exp
 from scipy.integrate import solve_ivp,simpson
@@ -17,7 +19,6 @@ from scipy.constants import h
 from scipy.constants import k as kB
 from scipy.fft import fft,ifft
 from erbium_model.src.simulation_erbium import Erbium_simulation_class
-
 
 class System_solver_class:
     def __init__(self,Simulation_class):
