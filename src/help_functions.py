@@ -5,11 +5,22 @@ Created on Tue Nov  9 16:26:55 2021
 @author: madshv
 """
 
+import json
+import os
+
 from numpy import log10
 import numpy as np
 from numpy.fft import fft,ifft,fftshift
 
 NP_TO_DB = 4.34
+
+def load_config():
+    config_file_path = os.path.join(os.path.dirname(__file__), 'config.json')
+
+    with open(config_file_path, 'r') as f:
+        config = json.load(f)
+
+    return config
 
 def np_to_db(P_np):
     return P_np*NP_TO_DB

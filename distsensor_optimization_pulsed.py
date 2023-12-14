@@ -8,11 +8,10 @@ Created on Mon Jun 20 16:40:10 2022
 
 import sys
 import os
-file_dir = os.path.dirname(__file__)
-sys.path.append(file_dir)
+sys.path.append(os.path.dirname(__file__))   # Insert current folder to path
 
-# Insert directory of your current folder
-sys.path.insert(0, 'C:/Users/madshv/OneDrive - Danmarks Tekniske Universitet/code')
+from src.help_functions import load_config
+sys.path.insert(0, load_config().get('erbium_model_path', 'default_value_if_not_set'))
 
 import numpy as np
 from scipy.constants import c,h

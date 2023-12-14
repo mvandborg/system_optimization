@@ -1,6 +1,10 @@
 
-
 # %% Import modules
+import os
+import sys
+this_dir = os.path.dirname(__file__)
+sys.path.append(this_dir)
+
 import time
 import multiprocessing
 
@@ -28,13 +32,14 @@ t = np.linspace(-Tmax/2,Tmax/2,N)
 Nz_save = 21
 Nsec = 3
 
-L1_vec = np.arange(1,74,5)*1e3
+L1_vec = np.arange(1,74,10)*1e3
 L2_vec = L-L1_vec
 
 N_sweep = len(L1_vec)
 
 # %% Run simulation
-savedir = r'/zhome/86/3/117435/phd/system_optimization/data/MI_test/altfiber_sec3/P100'
+# Insert directory for saving data
+savedir = this_dir+r'\data\MI_test\altfiber_sec3\P150'
 
 def sim_func(args):
     i, Ppeak0, t, T0, L1, L2, Nz_save, Fiber1, Fiber2, PSDnoise_dbmGHz, Nsec, savedir = args

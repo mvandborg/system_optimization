@@ -1,5 +1,10 @@
 
 # %% Import modules
+import os
+import sys
+this_dir = os.path.dirname(__file__)
+sys.path.append(this_dir)
+
 import time
 import multiprocessing
 import numpy as np
@@ -13,7 +18,8 @@ def A0_func(t,T0,Ppeak0):
     return sqrt(Ppeak0)*exp(-(2*t/T0)**22)
 
 # Directory for saving the data
-savedir = r'C:\Users\madshv\OneDrive - Danmarks Tekniske Universitet\code\system_optimization\data\MI_test\sec3'
+
+savedir = this_dir+r'\data\MI_test\sec3'
 
 L = 100e3                # Fiber length (km)
 T0 = 100                # Pulse length (ns)

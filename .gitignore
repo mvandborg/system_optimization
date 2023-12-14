@@ -13,3 +13,4 @@ src/__pycache__/
 # Cluster server output files
 Error*.txt
 Output*.txt
+config.json
