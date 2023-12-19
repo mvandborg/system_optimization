@@ -7,7 +7,7 @@ sys.path.append(file_dir)
 
 import pickle
 import numpy as np
-from .src.help_functions import norm_fft,norm_fft2d,moving_average,dbm,db,ESD2PSD
+from src.help_functions import norm_fft,norm_fft2d,moving_average,dbm,db,ESD2PSD
 from scipy.fft import fft,fftshift
 import matplotlib.pyplot as plt
 from scipy.constants import c
@@ -46,7 +46,7 @@ class SignalAnalyzer:
                 self.N = len(self.t)
                 
                 self.param = int(self.file_name.split('.')[0].split('_')[1])
-    
+        
     def analyze_data(self):
         # fft: Normalized such that |AF|^2=ESD and sum(|AF|^2)*df=sum(|A|^2)*dt
         AF = norm_fft2d(self.A,self.dt,axis=0)
@@ -173,7 +173,7 @@ def plot_PSD_at_start(R):
 
 if __name__ == '__main__':
     # Specify the path to the subfolder containing the .pkl files
-    subfolder_path = r"C:\Users\madshv\OneDrive - Danmarks Tekniske Universitet\code\system_optimization\data\MI_test\altfiber_sec3\P150"
+    subfolder_path = file_dir+r"\data\MI_test\sec3"
 
     # List all files in the subfolder
     file_list = os.listdir(subfolder_path)

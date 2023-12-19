@@ -9,7 +9,7 @@ import time
 import multiprocessing
 import numpy as np
 from numpy import sqrt,exp
-from physical_parameters import *
+from src.fiberdata_passive import Passivefiber_class
 from src.simulation_system import Simulation_pulsed_sections_fiber
 from src.help_functions import PSD_dbmGHz2dbmnm, PSD_dbmnm2dbmGHz
 
@@ -21,12 +21,19 @@ def A0_func(t,T0,Ppeak0):
 
 savedir = this_dir+r'\data\MI_test\sec3'
 
-L = 100e3                # Fiber length (km)
+L = 100e3               # Fiber length (km)
 T0 = 100                # Pulse length (ns)
-Fiber = Fiber_Scuba150
-#Ppeak0 = 150e-3
+lam_p = 1455e-9         # Wavelength (m)
+lam_pr = 1550e-9
+lam_arr = np.array([lam_p,lam_pr])
+Ppeak0 = 100e-3
 PSD_noise_dbmnm = -30
-PSDnoise_dbmGHz = PSD_dbmnm2dbmGHz(PSD_noise_dbmnm,1550,2.99e8)
+PSDnoise_dbmGHz = PSD_dbmnm2dbmGHz(PSD_noise_dbmnm,lam_pr*1e9,2.998e8)
+
+fiberdata_path = os.path.join(this_dir, 'fiber_data')
+Fiber = Passivefiber_class.from_data_sheet( fiberdata_path,
+                                            'OFS_SCUBA150.json',
+                                            lam_arr)
 
 Tmax = T0*7             # Simulation window size (ns)
 N = 2**16

@@ -16,14 +16,13 @@ from src.help_functions import load_config
 erbium_path = load_config().get('erbium_model_path', 'default_value_if_not_set')
 sys.path.insert(0, erbium_path)
 
-from scipy.constants import c
 from numpy import pi
 import numpy as np
 from src.fiberdata_passive import Passivefiber_class
 from erbium_model.src.fiberdata_erbium import Erbiumfiber_class
 from erbium_model.src.simulation_erbium import Erbium_simulation_class
 
-c = c*1e-9              # Unit m/ns
+c = 2.998              # Unit m/ns
 
 # Define physical parameters
 lam_p = 1455e-9         # Wavelength (m)

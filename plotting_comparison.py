@@ -15,21 +15,10 @@ c = c*1e-9                      # Unit m/ns
 
 # %% Import and process data
 
-#subfolder_path1 = r"C:\Users\madshv\OneDrive - Danmarks Tekniske Universitet\code\system_optimization\data\MI_test\sec1"
-#subfolder_path2 = r"C:\Users\madshv\OneDrive - Danmarks Tekniske Universitet\code\system_optimization\data\MI_test\sec2"
-#subfolder_path3 = r"C:\Users\madshv\OneDrive - Danmarks Tekniske Universitet\code\system_optimization\data\MI_test\sec3"
+relative_dir = "data/MI_test/altfiber_sec3"
 
-#subfolder_path1 = r"C:\Users\madshv\OneDrive - Danmarks Tekniske Universitet\code\system_optimization\data\MI_test\sec1\noise_-151"
-#subfolder_path2 = r"C:\Users\madshv\OneDrive - Danmarks Tekniske Universitet\code\system_optimization\data\MI_test\sec1\noise_-141"
-#subfolder_path3 = r"C:\Users\madshv\OneDrive - Danmarks Tekniske Universitet\code\system_optimization\data\MI_test\sec1\noise_-131"
-#subfolder_path4 = r"C:\Users\madshv\OneDrive - Danmarks Tekniske Universitet\code\system_optimization\data\MI_test\sec1\noise_-121"
-
-subfolder_path1 = r"C:\Users\madshv\OneDrive - Danmarks Tekniske Universitet\code\system_optimization\data\MI_test\altfiber_sec3\P100"
-subfolder_path2 = r"C:\Users\madshv\OneDrive - Danmarks Tekniske Universitet\code\system_optimization\data\MI_test\altfiber_sec3\P130"
-subfolder_path3 = r"C:\Users\madshv\OneDrive - Danmarks Tekniske Universitet\code\system_optimization\data\MI_test\altfiber_sec3\P150"
-
-
-subfolder_path_vec = [subfolder_path1,subfolder_path2,subfolder_path3]
+data_dir_vec = os.listdir(file_dir+'/'+relative_dir)
+subfolder_path_vec = [file_dir+'/'+relative_dir+'/'+data_dir for data_dir in data_dir_vec]
 
 file_list_vec = [os.listdir(subpath) for subpath in subfolder_path_vec]
 Nfile_vec = [len(f) for f in file_list_vec]
@@ -83,23 +72,21 @@ ax0[2].set_ylabel(r'$PSD_{bril}$ (dBm/Hz)')
 
 
 
-kvec = np.array([1e-10])
+k = 1e-10
 fig1,ax1 = plt.subplots(constrained_layout=True)
 for isec in range(Nsubfold):
-    for ik in range(len(kvec)):
-        k = kvec[ik]
-        y = db([1/(1/r.PSDbril_PSDmi_ratio[-1]+k/r.PSD_bril[-1]) for r in R_vec[isec]])
-        ax1.plot(param_list_vec[isec],y,label=f'{isec} Sections')
-        #ax1[isec].set_title(f'Sec {subfolder_path_vec[isec][-1]}')
-        #lab = PSD_dbmGHz2dbmnm(float(subfolder_path_vec[isec][-4:]) + 90, 1550, 3e8)
-        #lab = "Pnoise= {:.1f} dBm/nm".format(lab)
-        lab = 'test'
-        ax1.set_title(lab)
-        ax1.set_xlim([0,410])
-    ax1.grid()
-    ax1.set_xlabel('P0 (mW)')
-    ax1.set_ylabel(r'SNR (dB)')
-    ax1.legend()
+    y = db([1/(1/r.PSDbril_PSDmi_ratio[-1]+k/r.PSD_bril[-1]) for r in R_vec[isec]])
+    foldername = subfolder_path_vec[isec].split('/')[-1][1:]
+    #lab = PSD_dbmGHz2dbmnm(float(subfolder_path_vec[isec][-4:]) + 90, 1550, 3e8)
+    #lab = "Pnoise= {:.1f} dBm/nm".format(lab)
+    lab = "P="+foldername+"mW"
+    ax1.plot(param_list_vec[isec],y,label=lab)
+
+ax1.set_xlabel('L (km)')
+ax1.set_ylabel(r'SNR (dB)')
+ax1.grid()
+ax1.legend()
+
 plt.show()
 
 # %%
