@@ -8,7 +8,7 @@ sys.path.append(file_dir)
 
 import numpy as np
 import matplotlib.pyplot as plt
-from plotting import SignalAnalyzer,sort_res
+from plotting_MInoise import SignalAnalyzer,sort_res
 from src.help_functions import db,dbm,PSD_dbmGHz2dbmnm
 from scipy.constants import c
 c = c*1e-9                      # Unit m/ns
