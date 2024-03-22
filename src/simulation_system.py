@@ -150,8 +150,12 @@ class Simulation_pulsed_single_fiber:
 
     def save_pickle(self,filedir,filename):
         if type(self.Fiber)==list:
+            if type(self.Fiber[0])==list:
+                fiber_list = [j for sub in self.Fiber for j in sub]
+            else:
+                fiber_list = self.Fiber
             savedict = {
-                "Fiber_dict":[x.__dict__ for x in self.Fiber],
+                "Fiber_dict":[x.__dict__ for x in fiber_list],
                 "A":self.A,
                 "z":self.z,
                 "f":self.f_sh,
@@ -234,3 +238,45 @@ class Simulation_pulsed_sections2_fiber(Simulation_pulsed_single_fiber):
         self.z = ztot
         self.A = Atot
         return ztot,Atot
+
+# Class of multiple section fiber propagation for MI invesigation.
+# Here, the sections are not repeated, but each section is customizable
+
+class Simulation_pulsed_customsections2(Simulation_pulsed_single_fiber):
+    # L is an N x 2 array, with N sections of two lengths.
+    # Fiber is an N x 2 array of Fiber classes.
+    def __init__(self,t,A0,L_arr,Nz_save,Fiber_arr,PSDnoise_dbmHz):
+        super().__init__(t,A0,L_arr,Nz_save,Fiber_arr,PSDnoise_dbmHz)
+        self.Nsec = len(L_arr)
+
+    def run(self):
+        # First propagation         
+        z1,A1 = gnls1(self.t,self.omega,self.A0,self.L[0][0],
+                      self.Fiber[0][0],self.Nz_save)
+        Atot = A1
+        ztot = z1
+        A0_new = self.A0
+        for j in range(1,len(self.L[0])):
+            z1,A1 = gnls1(self.t,self.omega,A0_new,self.L[0][j],
+                          self.Fiber[0,j],self.Nz_save)
+            A0_new = A1[:,-1]
+            Atot = np.concatenate([Atot,A1[:,1:]],axis=1)
+            ztot = np.concatenate([ztot,ztot[-1]+z1[1:]])
+        
+        # Next propagations
+        for i in range(1,self.Nsec):
+            # Calculate the loss of the former section
+            loss_neper = np.sum([self.Fiber[i-1][j].alpha[1]*self.L[i-1][j] for j in range(len(self.L[i-1]))])
+            G = np.exp(loss_neper)
+            A0_new = np.sqrt(G)*A1[:,-1]
+            for j in range(0,len(self.L[i])):
+                z1,A1 = gnls1(self.t,self.omega,A0_new,self.L[i][j],
+                            self.Fiber[i][j],self.Nz_save)
+                A0_new = A1[:,-1]
+                Atot = np.concatenate([Atot,A1[:,1:]],axis=1)
+                ztot = np.concatenate([ztot,ztot[-1]+z1[1:]])
+        self.z = ztot
+        self.A = Atot
+        return ztot,Atot
+    
+    

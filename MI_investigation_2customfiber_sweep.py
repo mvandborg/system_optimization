@@ -11,7 +11,7 @@ import multiprocessing
 import numpy as np
 from numpy import sqrt,exp
 from src.fiberdata_passive import Passivefiber_class
-from src.simulation_system import Simulation_pulsed_sections2_fiber
+from src import simulation_system as simsys
 from src.help_functions import PSD_dbmGHz2dbmnm, PSD_dbmnm2dbmGHz
 
 # %% Define propagation fibers
@@ -45,31 +45,34 @@ t = np.linspace(-Tmax/2,Tmax/2,N)
 Nz_save = 21
 Nsec = 3
 
-L1_vec = np.arange(1,74,10)*1e3
+L1_vec = np.linspace(1e-3,89.99,24)*1e3
 L2_vec = L-L1_vec
 
 N_sweep = len(L1_vec)
 
+Fiber_arr = [[Fiber1],[Fiber2,Fiber1],[Fiber1]]
+L_arr = [[[90e3],[L1_vec[i],90e3-L1_vec[i]],[100e3]] for i in range(len(L1_vec))]
+
 # %% Run simulation
 # Insert directory for saving data
-savedir = this_dir+r'\data\MI_test\altfiber_sec3\P150'
+savedir = this_dir+r'\data\MI_test\TWXLinsec2_sec3\P100'
 
 def sim_func(args):
-    i, Ppeak0, t, T0, L1, L2, Nz_save, Fiber1, Fiber2, PSDnoise_dbmGHz, Nsec, savedir = args
+    i, Ppeak0, t, T0, L_arr, Nz_save, Fiber_arr, PSDnoise_dbmGHz, Nsec, savedir = args
     print('Start:\t Simulation no. '+str(i))
     start_time = time.time()
     A0 = A0_func(t, T0, Ppeak0)
-    S = Simulation_pulsed_sections2_fiber(t, A0, L1, L2, Nz_save, Fiber1,
-                                          Fiber2, PSDnoise_dbmGHz, Nsec)
+    S = simsys.Simulation_pulsed_customsections2(t, A0, L_arr, Nz_save, Fiber_arr, 
+                                                  PSDnoise_dbmGHz)
     z, A = S.run()
     #savefname = f'P0_{int(Ppeak0 * 1000)}.pkl'
-    savefname = f'L_{int(L1*1e-3)}.pkl'
+    savefname = f'L_{int(L_arr[1][0]*1e-3)}.pkl'
     S.save_pickle(savedir, savefname)
     end_time = time.time()
     print('End:\t Simulation no. '+str(i)+' Time: '+str(end_time-start_time))
 
 if __name__ == '__main__':
-    args_list = [(i, Ppeak0, t, T0, L1_vec[i],L2_vec[i], Nz_save, Fiber1,Fiber2, 
+    args_list = [(i, Ppeak0, t, T0, L_arr[i], Nz_save, Fiber_arr, 
                   PSDnoise_dbmGHz, Nsec, savedir) for i in range(N_sweep)]
     #for args in args_list:
     #    sim_func(args)

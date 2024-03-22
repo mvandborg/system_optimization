@@ -30,7 +30,7 @@ class Passivefiber_class:
         self.D = D*1e3                          # Convert from ps/nm*km to ns/m2
         self.beta2 = -lam**2/(2*pi*c_m_ns)*self.D    # Unit ns2/m
         
-        self.Aeff = Aeff                        # Effective area (1/m2)    
+        self.Aeff = Aeff*1e-12                  # Effective area (1/m2)    
         
         self.f = c_m_ns/self.lam                # Frequency (GHz)
         self.omega = 2*pi*self.f                # Angular frequency (GHz)
