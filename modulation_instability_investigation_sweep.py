@@ -19,9 +19,9 @@ def A0_func(t,T0,Ppeak0):
 
 # Directory for saving the data
 
-savedir = this_dir+r'\data\MI_test\sec3'
+savedir = this_dir+r'\data\MI_test\altfiber_sec1\P200'
 
-L = 100e3                # Fiber length (km)
+L = 75e3                # Fiber length (km)
 T0 = 100                # Pulse length (ns)
 Fiber = Fiber_Scuba150
 #Ppeak0 = 150e-3
