@@ -7,7 +7,7 @@ sys.path.append(file_dir)
 
 import pickle
 import numpy as np
-from .src.help_functions import norm_fft,norm_fft2d,moving_average,dbm,db,ESD2PSD
+from src.help_functions import norm_fft,norm_fft2d,moving_average,dbm,db,ESD2PSD
 from scipy.fft import fft,fftshift
 import matplotlib.pyplot as plt
 from scipy.constants import c
@@ -46,7 +46,7 @@ class SignalAnalyzer:
                 self.N = len(self.t)
                 
                 self.param = int(self.file_name.split('.')[0].split('_')[1])
-    
+        
     def analyze_data(self):
         # fft: Normalized such that |AF|^2=ESD and sum(|AF|^2)*df=sum(|A|^2)*dt
         AF = norm_fft2d(self.A,self.dt,axis=0)
@@ -85,11 +85,15 @@ class SignalAnalyzer:
         
         self.SNR = 1/(1/self.PSDbril_PSDmi_ratio+B/self.PSD_bril)
         
-        if isinstance(self.Fiber_dict,list)==False:
-            G = np.exp(self.Fiber_dict['alpha'][1]*self.L)
+        if isinstance(self.Fiber_dict,list)==True:
+            if isinstance(self.L[0],list)==True:
+                G = 1
+            else:
+                G = np.exp(self.Fiber_dict[0]['alpha'][1]*self.L[0]+self.Fiber_dict[1]['alpha'][1]*self.L[1])
         else:
-            G = np.exp(self.Fiber_dict[0]['alpha'][1]*self.L[0]+self.Fiber_dict[1]['alpha'][1]*self.L[1])
-        Ltot = np.sum(self.L)
+            G = np.exp(self.Fiber_dict['alpha'][1]*self.L)
+        Ltot = np.sum(np.sum(self.L))
+        
         self.fac = 1.0*(self.z<Ltot)+1/G*(self.z>Ltot)*(self.z<2*Ltot)+1/G**2*(self.z>2*Ltot)
         F = np.tile(self.f, (self.Nz, 1))
         self.P_inband = np.sum(np.abs(AF)**2*(np.abs(F.T)<0.1),axis=0)*self.df
@@ -158,22 +162,26 @@ def plot_SNR_vs_sweepparam(param_vec,R):
     ax.grid()
 
 def plot_PSD_at_start(R):
+    plot_PSD_at_zi(R,0)
+    
+def plot_PSD_at_zi(R,zi):
     idx_plot = 0
     R0 = R[idx_plot]
-    fig,ax = plt.subplots(constrained_layout=True)
-    ESD = np.abs(R0.AF[:,0])**2
+    idx_z = np.argmin(np.abs(R0.z-zi))
+    ESD = np.abs(R0.AF[:,idx_z])**2
     Tmax = R0.t[-1]-R0.t[0]
     PSD = ESD2PSD(ESD,Tmax)
+    
+    fig,ax = plt.subplots(constrained_layout=True)
     ax.plot(R0.f,dbm(PSD))
     ax.set_xlabel(r'Frequency (GHz)')
     ax.set_ylabel(r'PSD @ z=0 (dBm/GHz)')
     ax.grid()
 
 # %% Rune code
-
 if __name__ == '__main__':
     # Specify the path to the subfolder containing the .pkl files
-    subfolder_path = r"C:\Users\madshv\OneDrive - Danmarks Tekniske Universitet\code\system_optimization\data\MI_test\altfiber_sec3\P150"
+    subfolder_path = file_dir+r"\data\MI_test\TWXLinsec2_sec3\P100"
 
     # List all files in the subfolder
     file_list = os.listdir(subfolder_path)
@@ -195,7 +203,7 @@ if __name__ == '__main__':
     plot_PSDbril_PSDmi_ratio_vs_sweepparam(param_vec,R)
     plot_PSDbril_vs_sweepparam(param_vec,R)
     plot_SNR_vs_sweepparam(param_vec,R)
-    plot_PSD_at_start(R)
+    plot_PSD_at_zi(R,250e3)
     plt.show()
 
 # %%

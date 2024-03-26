@@ -1,0 +1,50 @@
+# %% Import modules
+import os
+import sys
+this_dir = os.path.dirname(__file__)
+sys.path.append(this_dir)
+
+import numpy as np
+from numpy import sqrt,exp
+from src.fiberdata_passive import Passivefiber_class
+from src.simulation_system import Simulation_pulsed_sections_fiber
+from src.help_functions import PSD_dbmGHz2dbmnm, PSD_dbmnm2dbmGHz,dbm
+import matplotlib.pyplot as plt
+
+# %% Define propagation fibers
+def A0_func(t,T0,Ppeak0):
+    return sqrt(Ppeak0)*exp(-(2*t/T0)**22)
+
+# Directory for saving the data
+
+savedir = this_dir+r'\data\MI_test\sec3'
+
+L = 100e3               # Fiber length (km)
+T0 = 100                # Pulse length (ns)
+lam_p = 1455e-9         # Wavelength (m)
+lam_pr = 1550e-9
+lam_arr = np.array([lam_p,lam_pr])
+Ppeak0 = 100e-3
+PSD_noise_dbmnm = -30
+PSDnoise_dbmGHz = PSD_dbmnm2dbmGHz(PSD_noise_dbmnm,lam_pr*1e9,2.998e8)
+
+fiberdata_path = os.path.join(this_dir, 'fiber_data')
+Fiber = Passivefiber_class.from_data_sheet( fiberdata_path,
+                                            'OFS_SCUBA150.json',
+                                            lam_arr)
+
+Tmax = T0*7             # Simulation window size (ns)
+N = 2**16
+t = np.linspace(-Tmax/2,Tmax/2,N)
+Nz_save = 21
+Nsec = 3
+
+
+# %% Run simulation
+
+A0 = A0_func(t, T0, Ppeak0)
+S = Simulation_pulsed_sections_fiber(t, A0, L, Nz_save, Fiber, PSDnoise_dbmGHz, Nsec)
+z, A = S.run()
+
+
+# %%
