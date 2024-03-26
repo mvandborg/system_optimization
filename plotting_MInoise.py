@@ -181,7 +181,7 @@ def plot_PSD_at_zi(R,zi):
 # %% Rune code
 if __name__ == '__main__':
     # Specify the path to the subfolder containing the .pkl files
-    subfolder_path = file_dir+r"\data\MI_test\TWXLinsec2_sec3\P150"
+    subfolder_path = file_dir+r"\data\MI_test\TWXLinsec2_sec3\P100"
 
     # List all files in the subfolder
     file_list = os.listdir(subfolder_path)

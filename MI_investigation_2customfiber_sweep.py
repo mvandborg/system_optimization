@@ -25,7 +25,7 @@ T0 = 100                # Pulse length (ns)
 lam_p = 1455e-9         # Wavelength (m)
 lam_pr = 1550e-9
 lam_arr = np.array([lam_p,lam_pr])
-Ppeak0 = 100e-3
+Ppeak0 = 150e-3
 PSD_noise_dbmnm = -30
 PSDnoise_dbmGHz = PSD_dbmnm2dbmGHz(PSD_noise_dbmnm,lam_pr*1e9,2.998e8)
 
@@ -55,7 +55,7 @@ L_arr = [[[90e3],[L1_vec[i],90e3-L1_vec[i]],[100e3]] for i in range(len(L1_vec))
 
 # %% Run simulation
 # Insert directory for saving data
-savedir = this_dir+r'\data\MI_test\TWXLinsec2_sec3\P100'
+savedir = this_dir+r'\data\MI_test\TWXLinsec2_sec3\P150'
 
 def sim_func(args):
     i, Ppeak0, t, T0, L_arr, Nz_save, Fiber_arr, PSDnoise_dbmGHz, Nsec, savedir = args
