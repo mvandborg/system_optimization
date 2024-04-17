@@ -19,7 +19,7 @@ def A0_func(t,T0,Ppeak0):
 
 # Directory for saving the data
 
-savedir = this_dir+r'\\data\\MI_test\\sec1_SMF28'
+savedir = os.path.join(this_dir,'\\data\\MI_test\\sec1_SMF28')
 
 L = 100e3               # Fiber length (km)
 T0 = 100                # Pulse length (ns)
