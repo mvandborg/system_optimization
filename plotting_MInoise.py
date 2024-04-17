@@ -11,7 +11,7 @@ from src.help_functions import norm_fft,norm_fft2d,moving_average,dbm,db,ESD2PSD
 from scipy.fft import fft,fftshift
 import matplotlib.pyplot as plt
 from scipy.constants import c
-c = c*1e-9
+c = c*1e-9  # unit m/ns
 
 # %% Define functions
 
@@ -24,7 +24,7 @@ class SignalAnalyzer:
         
         # Delete variables after calculations to free up RAM
         #del self.A
-        del self.Fiber_dict
+        #del self.Fiber_dict
     
     def extract_data(self):
         if self.file_name.endswith(".pkl"):
@@ -52,39 +52,52 @@ class SignalAnalyzer:
         AF = norm_fft2d(self.A,self.dt,axis=0)
         self.AF = AF
         Nav = 800
-        self.PF_end_smooth = moving_average(np.abs(AF)**2,n=Nav)
+        self.ESD_end_smooth = moving_average(np.abs(AF)**2,n=Nav)
 
         # Rayleigh backscattering power
         fbril = -11    # Target Brillouin frequency
         idx_fbril = np.argmin(np.abs(self.f[Nav-1:]-fbril))
 
-        C_capture = 1.5e-3
-        C_loss = 4.5e-3
-        T0 = 100       # NEEDS TO BE FIXED
-        Lpulse = c/1.45*T0
-        C_rayscat = C_capture*C_loss*(Lpulse/2)    # Rayleigh scattering coefficient (unitless)
-        C_bril = 8e-9   # Brillouin scattering coefficient (unitless)
-        
-        self.C_rayscat = C_rayscat
-        self.C_bril = C_bril
-        
+
+        # C_loss source: https://www.fiberoptics4sale.com/blogs/archive-posts/95048006-optical-fiber-loss-and-attenuation
+        lam_pr = 1550e-9    # Wavelength (m)
+        lam_um = lam_pr*1e6
+        K_loss = 2.0447e-4
+        self.C_loss = K_loss/lam_um**4 #4.5e-5
+        NA = 0.14
+        n = ng = 1.46
+        vg = c/ng
+        self.C_capture = 1/4.2*(NA/n)**2
+        self.C_rayscat = self.C_capture*self.C_loss   # Rayleigh scattering coefficient (1/m)
+                        
         # ESD of rayleigh scattering (nJ/GHz)
-        self.ESD_rayscat = self.PF_end_smooth[idx_fbril]*C_rayscat
-        # PSD of rayleigh scattering (W/GHz)              
-        self.PSD_rayscat = ESD2PSD(self.ESD_rayscat,self.Tmax)
-                       
-        # ESD of Brillouin scattering (nJ/GHz)
-        self.ESD_bril = np.abs(AF[int(self.N/2),:])**2*C_bril
-        # PSD of Brillouin scattering (W/GHz)                   
-        self.PSD_bril = ESD2PSD(self.ESD_bril,self.Tmax)                        
+        self.PSD_rayscat = 1/2*vg*self.C_rayscat*self.ESD_end_smooth[idx_fbril]
+               
+        # PSD of Brillouin scattering (nJ/GHz)
+        f_ac = 11       # Acoustic angular frequency (GHz)
+        Omega = 2*np.pi*f_ac
+        kB = 1.38e-14   # Unit W*ns/K
+        T = 300         # Unit K
+        p12=0.25        # Acoustooptic parameter (unitless)
+        rho0=2202       # Density of SiO2 (kg/m3)
+        eta11=3.88e-12  # Viscoelastic parameters (N*s/m2)
+        fwhm = 8*np.pi*n**2*eta11/(lam_pr**2*rho0)  # FWHM of Bril. spec (GHz)
+        gB = 4*np.pi*n**8*p12**2/(c*1e9*lam_pr**3*rho0*f_ac*1e9*fwhm*1e9)   #2e-11 (m/W)
+        Aeff = self.Fiber_dict['Aeff'][0]      # Nonlinear effectice area (m2)
+        g0 = gB/Aeff    # Bril. gain coeff. (1/W/m)
+        
+        omega0 = 2*np.pi*c/lam_pr       # Angular frequency (2*pi*GHz)
+        #C_bril = 8e-9   # Brillouin scattering coefficient (unitless) (from Tomin)
+        C_bril = omega0*vg*kB*T*g0/(2*Omega)    # Bril. scat. coeff. (unitless)
+        Epr = np.sum(np.abs(self.A)**2,axis=0)*self.dt    # Pulse energy (nJ)
+        self.PSD_bril = C_bril*Epr      # unit nJ            
 
         self.PSDbril_PSDmi_ratio = self.PSD_bril/self.PSD_rayscat
         q = 1.602e-19       # Fundamental electron charge (C) 
-        Rp = 0.8            # Responsivity (A/W)
-        B = q/(2*Rp)*1e9    # Convert from J to nJ
+        Rp = 1              # Responsivity (A/W)
+        PSD_shot = q/(2*Rp)*1e9    # Convert from J to nJ
         
-        self.SNR = 1/(1/self.PSDbril_PSDmi_ratio+B/self.PSD_bril)
-        
+        self.SNR = self.PSD_bril/(PSD_shot+self.PSD_rayscat)
         if isinstance(self.Fiber_dict,list)==True:
             if isinstance(self.L[0],list)==True:
                 G = 1
@@ -181,7 +194,7 @@ def plot_PSD_at_zi(R,zi):
 # %% Rune code
 if __name__ == '__main__':
     # Specify the path to the subfolder containing the .pkl files
-    subfolder_path = file_dir+r"\data\MI_test\TWXLinsec2_sec3\P100"
+    subfolder_path = file_dir+r"\data\MI_test\sec3"
 
     # List all files in the subfolder
     file_list = os.listdir(subfolder_path)
@@ -203,7 +216,7 @@ if __name__ == '__main__':
     plot_PSDbril_PSDmi_ratio_vs_sweepparam(param_vec,R)
     plot_PSDbril_vs_sweepparam(param_vec,R)
     plot_SNR_vs_sweepparam(param_vec,R)
-    plot_PSD_at_zi(R,250e3)
+    plot_PSD_at_zi(R,0)
     plt.show()
 
 # %%

@@ -123,20 +123,34 @@ class Simulation_pulsed_single_fiber:
         self.omega_sh = fftshift(self.omega)
         self.f_sh = self.omega_sh/(2*pi)
         
-        self.C_capture = 1.5e-3
-        self.C_loss = 4.5e-3
+        # C_loss source: https://www.fiberoptics4sale.com/blogs/archive-posts/95048006-optical-fiber-loss-and-attenuation
+        self.C_loss = 2.0447e-4/1.55**4 #4.5e-5
+        NA = 0.14
+        n = 1.46
+        self.C_capture = 1/4.2*(NA/n)**2
+        
         self.T0 = 100       # NEEDS TO BE FIXED
-        self.Lpulse = c/1.45*self.T0
+        self.Lpulse = c/n*self.T0
         # Rayleigh scattering coefficient (unitless)
-        self.C_rayscat = self.C_capture*self.C_loss*(self.Lpulse/2)    
+        self.C_rayscat = self.C_capture*self.C_loss*(self.Lpulse/2)
         # Brillouin scattering coefficient (unitless)
         self.C_bril = 8e-9   
         
         # Energy spectral density of the noise (nJ/GHz)
         self.ESDnoise_nJGHz = PSD2ESD(inv_dbm(self.PSDnoise_dbmGHz),self.Tmax)
+                  
+        # Amplitude spectral density (sqrt(nJ/GHz))
+        # Random phase and amplitude
+        Xre = np.random.normal(size=self.N)
+        Xim = np.random.normal(size=self.N)
+        self.ASDnoise = np.sqrt(self.ESDnoise_nJGHz/2)*(Xre+1j*Xim)
+        self.theta_noise = np.angle(self.ASDnoise)
         
-        self.theta_noise = pi*np.random.uniform(size=self.N)
-        self.ASDnoise = np.sqrt(self.ESDnoise_nJGHz)*np.exp(1j*self.theta_noise)    # Amplitude spectral density (sqrt(nJ/GHz))
+        # Only random phase
+        #self.theta_noise = pi*np.random.uniform(size=self.N)
+        #self.ASDnoise = np.sqrt(self.ESDnoise_nJGHz)*np.exp(1j*self.theta_noise)
+            
+            
         self.Anoise = norm_ifft(self.ASDnoise,self.dt)              # Normalized such that |AF|^2=ESD and sum(|AF|^2)*df=sum(|A|^2)*dt
 
         self.A0 = self.A0+self.Anoise
