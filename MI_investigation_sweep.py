@@ -15,11 +15,11 @@ from src.help_functions import PSD_dbmGHz2dbmnm, PSD_dbmnm2dbmGHz
 
 # %% Define propagation fibers
 def A0_func(t,T0,Ppeak0):
-    return sqrt(Ppeak0)*exp(-(2*t/T0)**22)
+    return sqrt(Ppeak0)*exp(-(2*t/T0)**52)
 
 # Directory for saving the data
 
-savedir = this_dir+r'\data\MI_test\sec3'
+savedir = this_dir+r'\data\MI_test\sec1_SMF28'
 
 L = 100e3               # Fiber length (km)
 T0 = 100                # Pulse length (ns)
