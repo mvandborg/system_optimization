@@ -4,6 +4,7 @@
     "GVD": 18,
     "Disp_slope": 0.06,
     "Aeff": 85,
-    "ng": 1.465,
-    "name": "Corning SMF28"
+    "ng": 1.468,
+    "NA":0.14,
+    "name": "Corning SMF 28"
 }
