@@ -4,6 +4,7 @@ Created on Wed Aug 24 11:47:10 2022
 
 @author: madshv
 """
+import os
 import numpy as np
 import pickle
 from .solver_system import System_solver_class,gnls1
@@ -191,7 +192,7 @@ class Simulation_pulsed_single_fiber:
                 "PSDnoise_dbmHz":self.PSDnoise_dbmHz,
                 "PSDnoise_dbmGHz":self.PSDnoise_dbmGHz
                 }
-        with open(filedir+'/'+filename, "wb") as f:
+        with open(os.path.join(filedir,filename), "wb") as f:
             pickle.dump(savedict, f)
         
 # Class of multiple section fiber propagation for MI investigation
