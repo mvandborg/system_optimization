@@ -19,7 +19,7 @@ def A0_func(t,T0,Ppeak0):
 
 # Directory for saving the data
 
-savedir = this_dir+r'\data\MI_test\sec1_SMF28'
+savedir = this_dir+r'\\data\\MI_test\\sec1_SMF28'
 
 L = 100e3               # Fiber length (km)
 T0 = 100                # Pulse length (ns)
@@ -56,7 +56,7 @@ def sim_func(args):
     z, A = S.run()
     savefname = f'P0_{int(Ppeak0 * 1000)}.pkl'
     #savefname = f'P0_{int(-PSDnoise_dbmGHz)}.pkl'
-    #S.save_pickle(savedir, savefname)
+    S.save_pickle(savedir, savefname)
     end_time = time.time()
     print('End:\t Simulation no. '+str(i)+' Time: '+str(end_time-start_time))
 
