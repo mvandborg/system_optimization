@@ -9,6 +9,7 @@ import numpy as np
 import pickle
 from .solver_system import System_solver_class,gnls1
 from scipy.constants import c
+from scipy.signal import butter,freqz
 from numpy import pi
 from .help_functions import inv_dbm, norm_fft, norm_ifft, PSD2ESD,PSD_dbmGHz2dbmnm
 from numpy.fft import fft,ifft,fftfreq,fftshift
@@ -145,6 +146,17 @@ class Simulation_pulsed_single_fiber:
         Xre = np.random.normal(size=self.N)
         Xim = np.random.normal(size=self.N)
         self.ASDnoise = np.sqrt(self.ESDnoise_nJGHz/2)*(Xre+1j*Xim)
+        
+        add_filter = True
+        if add_filter:
+            fcut_filt = 28
+            order_filt = 1
+            t = np.linspace(-self.Tmax/2,self.Tmax/2,self.N)
+
+            b,a = butter(order_filt,fcut_filt,fs=self.fsam)
+            w,h = freqz(b, a, fs=self.fsam, worN=self.N,whole=True)
+            self.ASDnoise = h*self.ASDnoise
+        
         self.theta_noise = np.angle(self.ASDnoise)
         
         # Only random phase

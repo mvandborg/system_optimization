@@ -69,7 +69,7 @@ def plot_power_vs_f(S,idx_z_vec):
         # Normal ESD
         ESD = np.abs(AF)**2
         # Apply moving average filter
-        Nav = 200
+        Nav = 700
         ESD = np.convolve(np.ones(Nav),ESD,mode='same')/Nav
         PSD = hf.ESD2PSD(ESD,S.Tmax)  
         PSD_dbmghz = 10*np.log10(PSD*1e3)
@@ -86,14 +86,14 @@ def plot_power_vs_f(S,idx_z_vec):
 # %% Run simulation
 
 # Directory for saving the data
-savedir = this_dir+r'\data\MI_test\sec1_SMF28'
+savedir = this_dir+r'\data\MI_test\meas_compare\noise_-20'
 
-L = 100e3               # Fiber length (km)
+L = 84e3               # Fiber length (km)
 T0 = 100                # Pulse length (ns)
 lam_p = 1455e-9         # Wavelength (m)
 lam_pr = 1550e-9
 lam_arr = np.array([lam_p,lam_pr])
-Ppeak0 = 200e-3
+Ppeak0 = 294e-3
 PSD_noise_dbmnm = -30
 PSDnoise_dbmGHz = PSD_dbmnm2dbmGHz(PSD_noise_dbmnm,lam_pr*1e9,2.998e8)
 
@@ -114,17 +114,22 @@ Nsec = 1
 
 # %% Run simulation
 
-A0 = A0_func(t, T0, Ppeak0)
+dnu = 0.5e-3      # Linewidth of the laser (GHz)
+dt = t[1]-t[0]
+phase = np.zeros(N)
+for i in range(1,N):
+    phase[i] = phase[i-1] + np.sqrt(2*np.pi*dnu*dt)*np.random.normal()
+A0 = A0_func(t, T0, Ppeak0)*np.exp(1j*phase)
 S = Simulation_pulsed_sections_fiber(t, A0, L, Nz_save, Fiber_SMF28, 
                                      PSDnoise_dbmGHz, Nsec)
 z, A = S.run()
 
-
+#S.save_pickle(savedir, savefname)
 # %% Plotting 
 
 plt.close('all')
 plot_power_vs_tf(S,0,dbscale=True)
 plot_Anoise(S)
-plot_power_vs_f(S,[0,2,4,6,8,10])
+plot_power_vs_f(S,[0,4,8,12,16,20])
 
 # %%

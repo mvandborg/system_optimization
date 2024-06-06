@@ -273,8 +273,8 @@ def NonlinOperator(z,BF,D,gr,gamma,fr,N):
     Apr = ifft(BF[N:]*exp(D[N:]*z))
     Pp = np.abs(Ap)**2
     Ppr = np.abs(Apr)**2
-    NAp =  1j*gamma[0]*(Pp+(2-fr)*Ppr)*Ap-1/2*gr[0]*Ppr*Ap
-    NApr = 1j*gamma[1]*(Ppr+(2-fr)*Pp)*Apr+1/2*gr[1]*Pp*Apr
+    NAp =  1j*8/9*gamma[0]*(Pp+(2-fr)*Ppr)*Ap-1/2*gr[0]*Ppr*Ap
+    NApr = 1j*8/9*gamma[1]*(Ppr+(2-fr)*Pp)*Apr+1/2*gr[1]*Pp*Apr
     dBF = np.concatenate([fft(NAp),fft(NApr)])*exp(-D*z)
     return dBF
 
@@ -341,7 +341,7 @@ def gnls1(T,W,A0,L,Fiber,nsaves):
 def NonlinOperator1(z,BF,D,gamma):
     Apr = ifft(BF*exp(D*z))
     Ppr = np.abs(Apr)**2
-    NA = 1j*gamma*Ppr*Apr
+    NA = 1j*8/9*gamma*Ppr*Apr
     dBF = fft(NA)*exp(-D*z)
     return dBF
 
