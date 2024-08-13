@@ -72,8 +72,13 @@ class SignalAnalyzer:
         self.C_capture = 1/4.2*(NA/n)**2
         self.C_rayscat = self.C_capture*self.C_loss   # Rayleigh scattering coefficient (1/m)
         
-        alpha_loss = self.Fiber_dict['alpha'][1]
-        Loss_discrete = 0.5
+        if type(self.Fiber_dict['alpha'])==list:
+            alpha_loss = self.Fiber_dict['alpha'][1]
+            Aeff = self.Fiber_dict['Aeff'][0]
+        else:
+            alpha_loss = self.Fiber_dict['alpha']
+            Aeff = self.Fiber_dict['Aeff']
+        Loss_discrete = 1
         Loss = np.exp(-alpha_loss*self.z)*Loss_discrete
         
         # ESD of rayleigh scattering (nJ/GHz)
@@ -90,7 +95,7 @@ class SignalAnalyzer:
         fwhm = 8*np.pi*n**2*eta11/(lam_pr**2*rho0)  # FWHM of Bril. spec (GHz)
         Gamma = 2*np.pi*fwhm
         gB = 4*np.pi*n**8*p12**2/(c*1e9*lam_pr**3*rho0*f_ac*1e9*fwhm*1e9)   #2e-11 (m/W)
-        Aeff = self.Fiber_dict['Aeff'][0]      # Nonlinear effectice area (m2)
+              # Nonlinear effectice area (m2)
         g0 = gB/Aeff    # Bril. gain coeff. (1/W/m)
         
         omega0 = 2*np.pi*c/lam_pr       # Angular frequency (2*pi*GHz)
@@ -107,6 +112,7 @@ class SignalAnalyzer:
         self.Epr_filtered = Epr_filtered
         
         self.P_bril = vg*self.bril_scat_coeff*Epr_filtered*Loss
+        self.P_bril0 = vg*self.bril_scat_coeff*Epr[0]*Loss
         self.PSD_bril = self.C_bril*Epr_filtered*Loss      # unit nJ        
         
         lor = (fwhm/2)**2/((fwhm/2)**2+self.f[idx_filter]**2)
@@ -117,30 +123,49 @@ class SignalAnalyzer:
             PSD_bril_fullspec.append(PSD_bril_i)
         self.PSD_bril_fullspec = np.array(PSD_bril_fullspec).T
         
-        q = 1.602e-19       # Fundamental electron charge (C) 
-        Rp = 1.05           # Responsivity (A/W)
-        self.PSD_shot = q/Rp*1e9#q/(2*Rp)*1e9    # Convert from J to nJ
+        q = 1.602e-19           # Fundamental electron charge (C) 
+        Rp = 1.05               # Responsivity (A/W)
+        B = 0.1                 # Bandwidth of photodiode (GHz)
+        NF_db = 10               # Noise figure of LNA
+        NF = 10**(NF_db/10)
+        
             
+        self.PSD_shot = NF*q/Rp*1e9         #q/(2*Rp)*1e9    # Convert from J to nJ
+        self.P_shot = self.PSD_shot*B       # Shot noise power (W)
+        self.P_rayscat = self.PSD_rayscat*B # Rayleigh scattering power (W)
+        
+        self.ER_db = 45
+        ER = 10**(self.ER_db/10)
+        self.Ppr0 = np.max(np.abs(self.A[:,0])**2)
+        self.Leff = (1-np.exp(-2*alpha_loss*self.L))/(2*alpha_loss)
+        self.P_b2 = self.bril_scat_coeff*self.Ppr0/ER*self.Leff
         
         # Squaring in envelope detection
-        self.PSD_noise = np.sqrt(self.PSD_shot**2+
-                            self.PSD_rayscat**2+
-                            self.PSD_bril**2+
-                            4*self.PSD_shot*self.PSD_rayscat+
-                            4*self.PSD_shot*self.PSD_bril+
-                            (4**2-np.pi**2)/4*self.PSD_rayscat*self.PSD_bril
-        )
-        self.PSD_signal = ( self.PSD_bril+
-                            0*self.PSD_rayscat+
-                            0*self.PSD_shot+
-                            np.pi/2*np.sqrt(self.PSD_bril*self.PSD_rayscat)
-        )
+        #self.PSD_noise = np.sqrt(self.PSD_shot**2+
+        #                    self.PSD_rayscat**2+
+        #                    self.PSD_bril**2+
+        #                    4*self.PSD_shot*self.PSD_rayscat+
+        #                    4*self.PSD_shot*self.PSD_bril+
+        #                    (4**2-np.pi**2)/4*self.PSD_rayscat*self.PSD_bril
+        #)
+        #self.PSD_signal = ( self.PSD_bril+
+        #                    self.PSD_rayscat+
+        #                    0*self.PSD_shot+
+        #                    np.pi/2*np.sqrt(self.PSD_bril*self.PSD_rayscat)
+        #)
         
         # Without squaring in envelope detection
-        #self.PSD_noise = self.PSD_shot+self.PSD_rayscat+self.PSD_bril
-        #self.PSD_signal = self.PSD_bril
+        self.PSD_noise = self.PSD_shot+self.PSD_rayscat+self.PSD_bril
+        self.PSD_signal = self.PSD_bril
+        self.P_noise = self.P_bril+self.P_shot+self.P_rayscat+self.P_b2
+        self.P_signal = self.P_bril
         
-        self.SNR = self.PSD_signal/self.PSD_noise
+        print(  'Psignal={:.3f}'.format(self.P_signal[0]*1e9),
+                'Pshot={:.3f}'.format(self.P_shot*1e9),
+                'Pray={:.3f}'.format(self.P_rayscat[0]*1e9),
+                'Pb2={:.3f}'.format(self.P_b2[0]*1e9))
+        
+        self.SNR = self.P_signal/self.P_noise
         
         if isinstance(self.Fiber_dict,list)==True:
             if isinstance(self.L[0],list)==True:
@@ -149,7 +174,7 @@ class SignalAnalyzer:
                 G = np.exp(self.Fiber_dict[0]['alpha'][1]*self.L[0]+\
                     self.Fiber_dict[1]['alpha'][1]*self.L[1])
         else:
-            G = np.exp(self.Fiber_dict['alpha'][1]*self.L)
+            G = np.exp(alpha_loss*self.L)
         Ltot = np.sum(np.sum(self.L))
         
         self.fac = 1.0*(self.z<Ltot)+1/G*(self.z>Ltot)*(self.z<2*Ltot)+1/G**2*(self.z>2*Ltot)
@@ -188,10 +213,10 @@ def plot_PSD_vs_lam(R,z0=0):
     idx_z = np.argmin(np.abs(R[0].z-z0))
     fig,ax = plt.subplots(constrained_layout=True)
     for i in range(len(R)):
-        AF = norm_fft(R[i].A[:,-1],R[i].dt)
+        AF = norm_fft(R[i].A[:,idx_z],R[i].dt)
         ESD = np.abs(AF)**2
         ESD = ESD2PSD(ESD,R[i].Tmax)
-        Nconv = 800
+        Nconv = 1
         ESD_smooth = np.convolve(ESD,np.ones(Nconv),mode='same')/Nconv
         ax.plot(R[i].f,PSD_dbmGHz2dbmnm(dbm(ESD_smooth),1550,3e8),
                 label=str(R[i].param))
@@ -242,9 +267,9 @@ def plot_SNR_vs_z(param_vec,R):
 def plot_PSDnoise_vs_z(param_vec,R):
     fig,ax = plt.subplots(constrained_layout=True)
     for r in R:
-        ax.plot(r.z*1e-3,dbm(r.PSD_noise),label=r.param)
+        ax.plot(r.z*1e-3,dbm(r.P_noise),label=r.param)
     ax.set_xlabel(r'z (km)')
-    ax.set_ylabel('Noise power (dBm/nm)')
+    ax.set_ylabel('Noise power (dBm)')
     ax.grid()
     ax.legend()
 
@@ -283,7 +308,7 @@ def plot_PSD_bril_at_zi(R0,zi):
 # %% Rune code
 if __name__ == '__main__':
     # Specify the path to the subfolder containing the .pkl files
-    subfolder_path = file_dir+r"\data\MI_test\meas_compare\linewidth_2000"
+    subfolder_path = file_dir+r"\data\MI_test\meas_compare_dfm\noise_-25"
 
     # List all files in the subfolder
     file_list = os.listdir(subfolder_path)
@@ -300,7 +325,7 @@ if __name__ == '__main__':
 
 # %% Plotting
 if __name__ == '__main__':
-    z0 = 40e3
+    z0 = 80e3
     plt.close('all')
     #plot_Pinband_vs_z(R)
     plot_Pbril_vs_z(R)

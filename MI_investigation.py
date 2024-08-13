@@ -8,14 +8,14 @@ import numpy as np
 from numpy import sqrt,exp
 from src.fiberdata_passive import Passivefiber_class
 from src.simulation_system import Simulation_pulsed_sections_fiber
-from src.help_functions import PSD_dbmGHz2dbmnm, PSD_dbmnm2dbmGHz,dbm, norm_fft
+from src.help_functions import PSD_dbmGHz2dbmnm, PSD_dbmnm2dbmGHz,dbm, norm_fft, norm_ifft
 import src.help_functions as hf
 import matplotlib.pyplot as plt
 from scipy.fft import fftshift
 
 # %% Define propagation fibers
 def A0_func(t,T0,Ppeak0):
-    return sqrt(Ppeak0)*exp(-(2*t/T0)**22)
+    return sqrt(Ppeak0)*exp(-(2*t/T0)**92)
 
 # Plotting functions
 def plot_power_vs_tf(S,idx_z,dbscale=False):
@@ -58,10 +58,12 @@ def plot_Anoise(S):
     ax[1].set_ylabel('ESD (nJ/GHz)')
     ax[1].grid()
 
-def plot_power_vs_f(S,idx_z_vec):
-    
-     
+def plot_power_vs_f(S,z0_vec):     
     fig,ax = plt.subplots(constrained_layout=True)
+    
+    idx_z_vec = []
+    for z0 in z0_vec:
+        idx_z_vec.append(np.argmin(np.abs(z0*1e3-S.z)))
     
     for idx_z in idx_z_vec:
         A = S.A[:,idx_z]
@@ -69,7 +71,7 @@ def plot_power_vs_f(S,idx_z_vec):
         # Normal ESD
         ESD = np.abs(AF)**2
         # Apply moving average filter
-        Nav = 700
+        Nav = 1
         ESD = np.convolve(np.ones(Nav),ESD,mode='same')/Nav
         PSD = hf.ESD2PSD(ESD,S.Tmax)  
         PSD_dbmghz = 10*np.log10(PSD*1e3)
@@ -83,45 +85,70 @@ def plot_power_vs_f(S,idx_z_vec):
     ax.grid()
     ax.legend()
 
+def lor(f,fwhm):
+    return (fwhm/2)**2/((fwhm/2)**2+f**2)
+
+def plot_Pinband_vs_z(S):
+    AF = hf.norm_fft2d(S.A,S.dt)
+    PF = np.abs(AF)**2
+    
+    f_cutoff = 200e-3
+    fwhm_lor = 35e-3
+
+    f_crop = S.f[np.abs(S.f)<f_cutoff]
+    
+    P_bril = np.zeros(S.Nz_save)
+    P_bril_norm = np.zeros(S.Nz_save)
+    for i in range(S.Nz_save):
+        bril_spec = lor(f_crop,fwhm_lor)
+        PF_bril = np.convolve(PF[:,i],bril_spec,mode='same')*S.df
+        P_bril[i] = np.max(PF[:,i])
+        P_bril_norm[i] = P_bril[i]/P_bril[0]*exp(S.Fiber.alpha*S.z[i])
+    
+    fig,ax = plt.subplots(2,1,constrained_layout=True)
+    ax[0].plot(S.z*1e-3,P_bril_norm)
+    ax[0].set_xlabel('z (km)')
+    ax[0].set_ylabel('Normalized Brillouin peak power')
+    ax[0].grid()
+    ax[0].legend()
+    ax[1].plot(S.z*1e-3,hf.db(P_bril))
+    ax[1].set_xlabel('z (km)')
+    ax[1].set_ylabel('Brillouin peak power(dB)')
+    ax[1].grid()
+    ax[1].legend()
+
 # %% Run simulation
 
 # Directory for saving the data
-savedir = this_dir+r'\data\MI_test\meas_compare\noise_-20'
+savedir = this_dir+r'\data\MI_test\meas_compare_twrs\linewidth_500'
 
-L = 84e3               # Fiber length (km)
-T0 = 100                # Pulse length (ns)
-lam_p = 1455e-9         # Wavelength (m)
+L = 67e3               # Fiber length (km)
+T0 = 1                # Pulse length (ns)
 lam_pr = 1550e-9
-lam_arr = np.array([lam_p,lam_pr])
-Ppeak0 = 294e-3
+Ppeak0 = 400e-3
+dnu = 2e-3              # Linewidth of the laser (GHz)
 PSD_noise_dbmnm = -30
+
 PSDnoise_dbmGHz = PSD_dbmnm2dbmGHz(PSD_noise_dbmnm,lam_pr*1e9,2.998e8)
 
 fiberdata_path = os.path.join(this_dir, 'fiber_data')
-Fiber = Passivefiber_class.from_data_sheet( fiberdata_path,
-                                            'OFS_SCUBA150.json',
-                                            lam_arr)
 
-Fiber_SMF28 = Passivefiber_class.from_data_sheet( fiberdata_path,
-                                            'Corning_SMF28.json',
-                                            lam_arr)
+Fiber = Passivefiber_class.from_data_sheet( fiberdata_path,
+                                            'OFS_TruewaveRS.json',
+                                            lam_pr)
 
 Tmax = T0*7             # Simulation window size (ns)
-N = 2**16
+N = 2**13
 t = np.linspace(-Tmax/2,Tmax/2,N)
-Nz_save = 21
+Nz_save = 101
 Nsec = 1
 
 # %% Run simulation
 
-dnu = 0.5e-3      # Linewidth of the laser (GHz)
-dt = t[1]-t[0]
-phase = np.zeros(N)
-for i in range(1,N):
-    phase[i] = phase[i-1] + np.sqrt(2*np.pi*dnu*dt)*np.random.normal()
-A0 = A0_func(t, T0, Ppeak0)*np.exp(1j*phase)
-S = Simulation_pulsed_sections_fiber(t, A0, L, Nz_save, Fiber_SMF28, 
-                                     PSDnoise_dbmGHz, Nsec)
+A0 = np.sqrt(Ppeak0)*np.ones(len(t))
+#A0 = A0_func(t, T0, Ppeak0)
+S = Simulation_pulsed_sections_fiber(t, A0, L, Nz_save, Fiber, Nsec,
+                                     PSDnoise_dbmGHz, linewidth=dnu)
 z, A = S.run()
 
 #S.save_pickle(savedir, savefname)
@@ -129,7 +156,9 @@ z, A = S.run()
 
 plt.close('all')
 plot_power_vs_tf(S,0,dbscale=True)
+plot_power_vs_tf(S,-1,dbscale=True)
 plot_Anoise(S)
-plot_power_vs_f(S,[0,4,8,12,16,20])
+plot_power_vs_f(S,[0,10,20,30,40,50,60])
+plot_Pinband_vs_z(S)
 
 # %%

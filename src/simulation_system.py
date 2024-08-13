@@ -9,11 +9,19 @@ import numpy as np
 import pickle
 from .solver_system import System_solver_class,gnls1
 from scipy.constants import c
+from scipy.constants import h as h_planck
 from scipy.signal import butter,freqz
 from numpy import pi
-from .help_functions import inv_dbm, norm_fft, norm_ifft, PSD2ESD,PSD_dbmGHz2dbmnm
+from .help_functions import dbm, inv_dbm, norm_fft, norm_ifft, PSD2ESD,PSD_dbmGHz2dbmnm
 from numpy.fft import fft,ifft,fftfreq,fftshift
 c = c*1e-9              # Unit m/ns
+
+def get_PSD_quant_noise_WGHz():
+    lam_0 = 1550e-9
+    c_m_s = 2.998e8
+    nu_0 = c_m_s/lam_0  # Frequency (Hz)
+    PSD_QL_WGHz = 1/2*h_planck*nu_0*1e9   # ESD of quantum noise floor (W/GHz)
+    return PSD_QL_WGHz
 
 # Class of CW simulation
 class System_simulation_class:
@@ -102,7 +110,8 @@ class System_simulation_pulsed_class(System_simulation_class):
         
 # Class of single fiber propagation for MI investigation
 class Simulation_pulsed_single_fiber:
-    def __init__(self,t,A0,L,Nz_save,Fiber,PSDnoise_dbmGHz):
+    def __init__(self,t,A0,L,Nz_save,Fiber,PSDnoise_dbmGHz=-71.9,linewidth=0):
+        # Pnoise=-72.9 dBm/GHz is the quantum limit (ESD=1/2*h*nu)
         self.t = t
         self.A0 = A0
         self.L = L
@@ -114,6 +123,7 @@ class Simulation_pulsed_single_fiber:
         self.PSDnoise_dbmGHz = PSDnoise_dbmGHz
         self.PSDnoise_dbmHz = PSDnoise_dbmGHz-90
         self.PSDnoise_dbmnm = PSD_dbmGHz2dbmnm(PSDnoise_dbmGHz,1550,3e8)
+        self.dnu = linewidth    # Phase noise linewidth (GHz)
         
         self.dt = self.Tmax/self.N
         self.fsam = 1/self.dt         # Sampling frequency (GHz)
@@ -124,50 +134,48 @@ class Simulation_pulsed_single_fiber:
         self.omega = 2*pi*self.f
         self.omega_sh = fftshift(self.omega)
         self.f_sh = self.omega_sh/(2*pi)
-        
-        # C_loss source: https://www.fiberoptics4sale.com/blogs/archive-posts/95048006-optical-fiber-loss-and-attenuation
-        self.C_loss = 2.0447e-4/1.55**4 #4.5e-5
-        NA = 0.14
-        n = 1.46
-        self.C_capture = 1/4.2*(NA/n)**2
-        
-        self.T0 = 100       # NEEDS TO BE FIXED
-        self.Lpulse = c/n*self.T0
-        # Rayleigh scattering coefficient (unitless)
-        self.C_rayscat = self.C_capture*self.C_loss*(self.Lpulse/2)
-        # Brillouin scattering coefficient (unitless)
-        self.C_bril = 8e-9   
-        
+               
         # Energy spectral density of the noise (nJ/GHz)
         self.ESDnoise_nJGHz = PSD2ESD(inv_dbm(self.PSDnoise_dbmGHz),self.Tmax)
-                  
+        
         # Amplitude spectral density (sqrt(nJ/GHz))
         # Random phase and amplitude
         Xre = np.random.normal(size=self.N)
         Xim = np.random.normal(size=self.N)
         self.ASDnoise = np.sqrt(self.ESDnoise_nJGHz/2)*(Xre+1j*Xim)
         
-        add_filter = True
+        # Phase noise
+        phase = np.zeros(self.N)
+        fac = np.sqrt(2*np.pi*self.dnu*self.dt)
+        for i in range(1,self.N):
+            phase[i] = phase[i-1] + fac*np.random.normal()     
+                    
+        # Normalized such that |AF|^2=ESD and sum(|AF|^2)*df=sum(|A|^2)*dt
+        self.Anoise = norm_ifft(self.ASDnoise,self.dt)              
+
+        self.A0 = self.A0*np.exp(1j*phase)+self.Anoise      # Add noises
+        self.AF0 = norm_fft(self.A0,self.dt)
+
+        # Filter the input signal
+        add_filter = False
         if add_filter:
-            fcut_filt = 28
-            order_filt = 1
-            t = np.linspace(-self.Tmax/2,self.Tmax/2,self.N)
+            fcut_filt = 28  # Filter cut off frequency (GHz)
+            order_filt = 5
 
             b,a = butter(order_filt,fcut_filt,fs=self.fsam)
             w,h = freqz(b, a, fs=self.fsam, worN=self.N,whole=True)
-            self.ASDnoise = h*self.ASDnoise
-        
-        self.theta_noise = np.angle(self.ASDnoise)
-        
-        # Only random phase
-        #self.theta_noise = pi*np.random.uniform(size=self.N)
-        #self.ASDnoise = np.sqrt(self.ESDnoise_nJGHz)*np.exp(1j*self.theta_noise)
             
+            # Quantum noise
+            Xre_QL = np.random.normal(size=self.N)
+            Xim_QL = np.random.normal(size=self.N)
+            # ESD of quantum noise floor (W/GHz)
+            PSD_QL_WGHz = get_PSD_quant_noise_WGHz()   
+            ESD_QL_nJGHz = PSD2ESD(PSD_QL_WGHz,self.Tmax)
+            ASD_QL = np.sqrt(ESD_QL_nJGHz/2)*(Xre_QL+1j*Xim_QL)
             
-        self.Anoise = norm_ifft(self.ASDnoise,self.dt)              # Normalized such that |AF|^2=ESD and sum(|AF|^2)*df=sum(|A|^2)*dt
-
-        self.A0 = self.A0+self.Anoise
-        self.AF0 = norm_fft(self.A0,self.dt)
+            self.AF0 = fftshift(h)*self.AF0+ASD_QL
+            self.A0 = norm_ifft(self.AF0,self.dt)
+        
     
     def run(self):
         z,A = gnls1(self.t,self.omega,self.A0,self.L,self.Fiber,self.Nz_save)
@@ -188,9 +196,9 @@ class Simulation_pulsed_single_fiber:
                 "f":self.f_sh,
                 "t":self.t,
                 "L":self.L,
-                "T0":self.T0,
                 "PSDnoise_dbmHz":self.PSDnoise_dbmHz,
-                "PSDnoise_dbmGHz":self.PSDnoise_dbmGHz
+                "PSDnoise_dbmGHz":self.PSDnoise_dbmGHz,
+                "linewidth":self.dnu
                 }
         else:
             savedict = {
@@ -200,17 +208,17 @@ class Simulation_pulsed_single_fiber:
                 "f":self.f_sh,
                 "t":self.t,
                 "L":self.L,
-                "T0":self.T0,
                 "PSDnoise_dbmHz":self.PSDnoise_dbmHz,
-                "PSDnoise_dbmGHz":self.PSDnoise_dbmGHz
+                "PSDnoise_dbmGHz":self.PSDnoise_dbmGHz,
+                "linewidth":self.dnu
                 }
         with open(os.path.join(filedir,filename), "wb") as f:
             pickle.dump(savedict, f)
         
 # Class of multiple section fiber propagation for MI investigation
 class Simulation_pulsed_sections_fiber(Simulation_pulsed_single_fiber):
-    def __init__(self,t,A0,L,Nz_save,Fiber,PSDnoise_dbmGHz,Nsec):
-        super().__init__(t,A0,L,Nz_save,Fiber,PSDnoise_dbmGHz)
+    def __init__(self,t,A0,L,Nz_save,Fiber,Nsec,PSDnoise_dbmGHz=-72.9,linewidth=0):
+        super().__init__(t,A0,L,Nz_save,Fiber,PSDnoise_dbmGHz,linewidth)
         self.Nsec = Nsec
     
     def run(self):
@@ -219,7 +227,10 @@ class Simulation_pulsed_sections_fiber(Simulation_pulsed_single_fiber):
         z1,A1 = gnls1(self.t,self.omega,self.A0,self.L,self.Fiber,self.Nz_save)
         Atot = A1
         ztot = z1
-        G = np.exp(self.Fiber.alpha[1]*self.L)
+        if type(self.Fiber.alpha)==list:
+            G = np.exp(self.Fiber.alpha[1]*self.L)
+        else:
+            G = np.exp(self.Fiber.alpha*self.L)
         for i in range(1,self.Nsec):
             A0_new = np.sqrt(G)*A1[:,-1]
             z1,A1 = gnls1(self.t,self.omega,A0_new,self.L,self.Fiber,self.Nz_save)
