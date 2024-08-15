@@ -202,6 +202,7 @@ def plot_Pinband_vs_z(R):
 
 def plot_Pbril_vs_z(R):
     fig,ax = plt.subplots(constrained_layout=True)
+    R = [R[i] for i in [0,2,4,6,8,10,12]]
     for i in range(len(R)):
         ax.plot(R[i].z*1e-3,dbm(R[i].P_bril),label=R[i].param)
     ax.set_xlabel('z (km)')

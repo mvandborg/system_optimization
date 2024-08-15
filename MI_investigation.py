@@ -15,7 +15,7 @@ from scipy.fft import fftshift
 
 # %% Define propagation fibers
 def A0_func(t,T0,Ppeak0):
-    return sqrt(Ppeak0)*exp(-(2*t/T0)**92)
+    return sqrt(Ppeak0)*exp(-(2*t/T0)**2)
 
 # Plotting functions
 def plot_power_vs_tf(S,idx_z,dbscale=False):
@@ -120,43 +120,43 @@ def plot_Pinband_vs_z(S):
 # %% Run simulation
 
 # Directory for saving the data
-savedir = this_dir+r'\data\MI_test\meas_compare_twrs\linewidth_500'
+savedir = this_dir#+r'\data\MI_test\meas_compare_twrs\linewidth_500'
 
-L = 67e3               # Fiber length (km)
-T0 = 1                # Pulse length (ns)
+L = 30e3               # Fiber length (m)
+T0 = 30e-3                # Pulse length (ns)
 lam_pr = 1550e-9
-Ppeak0 = 400e-3
-dnu = 2e-3              # Linewidth of the laser (GHz)
-PSD_noise_dbmnm = -30
+Ppeak0 = 200e-3
+dnu = 0#2e-3              # Linewidth of the laser (GHz)
+PSD_noise_dbmnm = -100#-30
 
 PSDnoise_dbmGHz = PSD_dbmnm2dbmGHz(PSD_noise_dbmnm,lam_pr*1e9,2.998e8)
 
 fiberdata_path = os.path.join(this_dir, 'fiber_data')
 
 Fiber = Passivefiber_class.from_data_sheet( fiberdata_path,
-                                            'OFS_TruewaveRS.json',
+                                            'Corning_SMF28.json',
                                             lam_pr)
 
-Tmax = T0*7             # Simulation window size (ns)
-N = 2**13
+Tmax = T0*20             # Simulation window size (ns)
+N = 2**9
 t = np.linspace(-Tmax/2,Tmax/2,N)
 Nz_save = 101
 Nsec = 1
 
 # %% Run simulation
 
-A0 = np.sqrt(Ppeak0)*np.ones(len(t))
-#A0 = A0_func(t, T0, Ppeak0)
+#A0 = np.sqrt(Ppeak0)*np.ones(len(t))
+A0 = A0_func(t, T0, Ppeak0)
 S = Simulation_pulsed_sections_fiber(t, A0, L, Nz_save, Fiber, Nsec,
                                      PSDnoise_dbmGHz, linewidth=dnu)
 z, A = S.run()
 
-#S.save_pickle(savedir, savefname)
+S.save_pickle(savedir, 'full.pkl')
 # %% Plotting 
 
 plt.close('all')
-plot_power_vs_tf(S,0,dbscale=True)
-plot_power_vs_tf(S,-1,dbscale=True)
+plot_power_vs_tf(S,0,dbscale=False)
+plot_power_vs_tf(S,-1,dbscale=False)
 plot_Anoise(S)
 plot_power_vs_f(S,[0,10,20,30,40,50,60])
 plot_Pinband_vs_z(S)
