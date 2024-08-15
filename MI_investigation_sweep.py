@@ -19,7 +19,7 @@ def A0_func(t,T0,Ppeak0):
 
 # Directory for saving the data
 
-savedir = os.path.join(this_dir,'\\data\\MI_test\\sec1_SMF28')
+savedir = os.path.join(this_dir,'data/MI_test/sec1_SumULL')
 
 L = 100e3               # Fiber length (km)
 T0 = 100                # Pulse length (ns)
@@ -32,17 +32,17 @@ PSDnoise_dbmGHz = PSD_dbmnm2dbmGHz(PSD_noise_dbmnm,lam_pr*1e9,2.998e8)
 
 fiberdata_path = os.path.join(this_dir, 'fiber_data')
 Fiber = Passivefiber_class.from_data_sheet( fiberdata_path,
-                                            'Corning_SMF28.json',
+                                            'Sumitomo_ULL.json',
                                             lam_arr)
 
-Tmax = T0*7             # Simulation window size (ns)
+Tmax = T0*5             # Simulation window size (ns)
 N = 2**16
 t = np.linspace(-Tmax/2,Tmax/2,N)
 Nz_save = 11
 Nsec = 1
 
 step_sweep = 10
-Ppeak0_vec = np.arange(10,250,step_sweep)*1e-3      # Pump power (W)
+Ppeak0_vec = np.arange(10,350,step_sweep)*1e-3      # Pump power (W)
 #PSDnoise_dbmGHz_vec = np.array([-151,-141,-131,-121])+90
 N_sweep = len(Ppeak0_vec)
 
