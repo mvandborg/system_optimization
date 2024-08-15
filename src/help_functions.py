@@ -44,7 +44,7 @@ def norm_fft(A,dt):         # Normalized fft such that sum(|A|^2)*dt=sum(|AF|^2)
     return fftshift(fft(A)*dt)
 
 def norm_ifft(AF,dt):       # Normalized ifft such that sum(|A|^2)*dt=sum(|AF|^2)*df
-    return fftshift(ifft(AF)/dt)
+    return ifft(fftshift(AF))/dt
 
 def norm_fft2d(A,dt,axis=0):         # Normalized fft such that sum(|A|^2)*dt=sum(|AF|^2)*df
     return fftshift(fft(A,axis=0)*dt,axes=0)

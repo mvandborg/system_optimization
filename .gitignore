@@ -12,6 +12,8 @@ src/__pycache__/
 hpc_output/
 .git-rewrite/
 .gitattributes
+.conda
+*.pytest*
 
 # Cluster server output files
 Error*.txt

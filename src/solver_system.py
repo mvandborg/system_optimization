@@ -207,8 +207,8 @@ class System_result_class:
 
 
 # Code for pulsed propagation
-def gnls(T,W,A0,L,Fiber,Nz,nsaves):
-    # Propagates the input pulse A0 using the GNLS split step method.
+def gnls2(T,W,A0,L,Fiber,Nz,nsaves):
+    # Propagates the inputs [A0_p,A0_pr] using the GNLS split step method.
     # OUTPUT VARIABLES
     # z: List of z-coordinates
     # As: Saved time domain field a t distances z
@@ -273,14 +273,13 @@ def NonlinOperator(z,BF,D,gr,gamma,fr,N):
     Apr = ifft(BF[N:]*exp(D[N:]*z))
     Pp = np.abs(Ap)**2
     Ppr = np.abs(Apr)**2
-    NAp =  1j*gamma[0]*(Pp+(2-fr)*Ppr)*Ap-1/2*gr[0]*Ppr*Ap
-    NApr = 1j*gamma[1]*(Ppr+(2-fr)*Pp)*Apr+1/2*gr[1]*Pp*Apr
+    NAp =  1j*8/9*gamma[0]*(Pp+(2-fr)*Ppr)*Ap-1/2*gr[0]*Ppr*Ap
+    NApr = 1j*8/9*gamma[1]*(Ppr+(2-fr)*Pp)*Apr+1/2*gr[1]*Pp*Apr
     dBF = np.concatenate([fft(NAp),fft(NApr)])*exp(-D*z)
     return dBF
 
 def prop_EDF(EDFclass,Nz,Pp0,Ppr0,lam_p,lam_pr,L):
     z_EDF = np.linspace(0,L,Nz)
-    no_of_modes = 2     # Number of optical modes in the fiber
     Nlamnoise = 21
     lamnoise_min = 1500*1e-9
     lamnoise_max = 1590*1e-9
@@ -312,9 +311,9 @@ def gnls1(T,W,A0,L,Fiber,nsaves):
     # Nz: No. of steps in progagation (z) direction
     # nsaves: No. of saves of the field along z
     # Fiber: Fiberclass
-    gamma = Fiber.gamma[1]
-    alpha = Fiber.alpha[1]
-    beta2 = Fiber.beta2[1]
+    gamma = Fiber.gamma
+    alpha = Fiber.alpha
+    beta2 = Fiber.beta2
     
     # Define frequencies
     N = len(T)
@@ -331,7 +330,7 @@ def gnls1(T,W,A0,L,Fiber,nsaves):
     A[:,0] = A0
     for iz in range(1,len(z)):
         res = solve_ivp(NonlinOperator1,[z[iz-1],z[iz]],BF,method='RK45',
-                        t_eval=np.array([z[iz]]),rtol=1e-6,atol=1e-8,
+                        t_eval=np.array([z[iz]]),rtol=1e-8,atol=1e-8,
                         args=(D,gamma))
         BF = res.y[:,0]
         A[:,iz] = ifft(BF*exp(D*z[iz]))
@@ -341,7 +340,7 @@ def gnls1(T,W,A0,L,Fiber,nsaves):
 def NonlinOperator1(z,BF,D,gamma):
     Apr = ifft(BF*exp(D*z))
     Ppr = np.abs(Apr)**2
-    NA = 1j*gamma*Ppr*Apr
+    NA = 1j*8/9*gamma*Ppr*Apr
     dBF = fft(NA)*exp(-D*z)
     return dBF
 
