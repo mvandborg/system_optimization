@@ -25,18 +25,25 @@ def get_ASE_noise_WGHz(G=20,lam0=1550e-9):
     PSD_ase = n_sp*h*nu*(G-1) # PSD of ASE (W/Hz)
     return PSD_ase*1e9
 
+def get_ASE_ql(lam0=1550e-9):
+    h = 6.626e-34
+    c = 2.998e8
+    nu = c/lam0
+    PSD_ase = h*nu # PSD of ASE (W/Hz)
+    return PSD_ase
+
 # Directory for saving the data
 
-savedir = os.path.join(this_dir,'data\\MI_test\\meas_compare_dfm\\noise_-25_fitpower')
+savedir = os.path.join(this_dir,'data\\MI_test\\meas_compare_dfm\\noise_-15_fitpower')
 
 L = 84e3               # Fiber length (km)
 T0 = 10                # Pulse length (ns)
-lam_pr = 1550e-9
+lam_pr = 1540e-9
 Ppeak0 = 100e-3
 
 # EDFA noise calculation
 
-PSD_ase = get_ASE_noise_WGHz(G=100,lam0=lam_pr)
+PSD_ase = get_ASE_noise_WGHz(G=1e3,lam0=lam_pr)
 PSD_ase_dbmGHz = dbm(PSD_ase)
 PSDnoise_dbmGHz = PSD_ase_dbmGHz
 PSD_noise_dbmnm = PSD_dbmGHz2dbmnm(PSDnoise_dbmGHz,lam_pr*1e9,2.998e8)
@@ -48,16 +55,16 @@ Fiber = Passivefiber_class.from_data_sheet( fiberdata_path,
                                             lam_pr)
 
 Tmax = T0*7             # Simulation window size (ns)
-N = 2**15
+N = 2**14
 t = np.linspace(-Tmax/2,Tmax/2,N)
-Nz_save = 101
+Nz_save = 21
 Nsec = 1
 
 step_sweep = 10
-Ppeak0_vec = np.array([166,192,231,263,301,369])*1e-3 
+#Ppeak0_vec = np.array([166,192,231,263,301,369])*1e-3 
 Ppeak0_vec = np.array([168,188,211,236,264,297,334,374,
                        420,471,529,592,664])*1e-3 
-Ppeak0_vec = Ppeak0_vec/2
+Ppeak0_vec = np.array([p/2 for p in Ppeak0_vec])
 #Ppeak0_vec = np.arange(10,250,step_sweep)*1e-3      # Pump power (W)
 #PSDnoise_dbmGHz_vec = np.array([-151,-141,-131,-121])+90
 N_sweep = len(Ppeak0_vec)

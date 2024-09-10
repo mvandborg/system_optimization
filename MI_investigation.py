@@ -122,12 +122,12 @@ def plot_Pinband_vs_z(S):
 # Directory for saving the data
 savedir = this_dir#+r'\data\MI_test\meas_compare_twrs\linewidth_500'
 
-L = 30e3               # Fiber length (m)
-T0 = 30e-3                # Pulse length (ns)
+L = 84e3               # Fiber length (m)
+T0 = 1                # Pulse length (ns)
 lam_pr = 1550e-9
 Ppeak0 = 200e-3
-dnu = 0#2e-3              # Linewidth of the laser (GHz)
-PSD_noise_dbmnm = -100#-30
+dnu = 2e-3              # Linewidth of the laser (GHz)
+PSD_noise_dbmnm = -25#-30
 
 PSDnoise_dbmGHz = PSD_dbmnm2dbmGHz(PSD_noise_dbmnm,lam_pr*1e9,2.998e8)
 
@@ -138,15 +138,15 @@ Fiber = Passivefiber_class.from_data_sheet( fiberdata_path,
                                             lam_pr)
 
 Tmax = T0*20             # Simulation window size (ns)
-N = 2**9
+N = 2**12
 t = np.linspace(-Tmax/2,Tmax/2,N)
 Nz_save = 101
 Nsec = 1
 
 # %% Run simulation
 
-#A0 = np.sqrt(Ppeak0)*np.ones(len(t))
-A0 = A0_func(t, T0, Ppeak0)
+A0 = np.sqrt(Ppeak0)*np.ones(len(t))
+#A0 = A0_func(t, T0, Ppeak0)
 S = Simulation_pulsed_sections_fiber(t, A0, L, Nz_save, Fiber, Nsec,
                                      PSDnoise_dbmGHz, linewidth=dnu)
 z, A = S.run()

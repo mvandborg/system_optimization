@@ -126,15 +126,14 @@ class SignalAnalyzer:
         q = 1.602e-19           # Fundamental electron charge (C) 
         Rp = 1.05               # Responsivity (A/W)
         B = 0.1                 # Bandwidth of photodiode (GHz)
-        NF_db = 10               # Noise figure of LNA
+        NF_db = 8               # Noise figure of LNA
         NF = 10**(NF_db/10)
         
-            
         self.PSD_shot = NF*q/Rp*1e9         #q/(2*Rp)*1e9    # Convert from J to nJ
         self.P_shot = self.PSD_shot*B       # Shot noise power (W)
         self.P_rayscat = self.PSD_rayscat*B # Rayleigh scattering power (W)
         
-        self.ER_db = 45
+        self.ER_db = 37.75#45
         ER = 10**(self.ER_db/10)
         self.Ppr0 = np.max(np.abs(self.A[:,0])**2)
         self.Leff = (1-np.exp(-2*alpha_loss*self.L))/(2*alpha_loss)
@@ -165,7 +164,7 @@ class SignalAnalyzer:
                 'Pray={:.3f}'.format(self.P_rayscat[0]*1e9),
                 'Pb2={:.3f}'.format(self.P_b2[0]*1e9))
         
-        self.SNR = self.P_signal/self.P_noise
+        self.SNR = 1.75*self.P_signal/self.P_noise
         
         if isinstance(self.Fiber_dict,list)==True:
             if isinstance(self.L[0],list)==True:
@@ -256,10 +255,18 @@ def plot_PSDbril_vs_sweepparam(param_vec,R,zi):
     ax.grid()
     ax.legend()
 
-def plot_SNR_vs_z(param_vec,R):
+def plot_SNR_vs_z(param_vec,R,Navg=1):
+    SNR_max = 2/np.pi/(1-2/np.pi)*Navg
     fig,ax = plt.subplots(constrained_layout=True)
     for r in R:
-        ax.plot(r.z*1e-3,db(r.SNR),label=r.param)
+        ax.plot(r.z*1e-3,
+                db(r.SNR*Navg),
+                label=r.param)
+    ax.plot([r.z[0]*1e-3,r.z[-1]*1e-3],
+            [db(SNR_max),db(SNR_max)],
+            label='Max',
+            color='black',
+            ls='--')
     ax.set_xlabel(r'z (km)')
     ax.set_ylabel('SNR (dB)')
     ax.grid()
@@ -274,13 +281,17 @@ def plot_PSDnoise_vs_z(param_vec,R):
     ax.grid()
     ax.legend()
 
-def plot_SNR_vs_sweepparam(param_vec,R,z0=0):
+def plot_SNR_vs_sweepparam(param_vec,R,z0=0,dBscale=False,Navg=1):
     idx_z = np.argmin(np.abs(R[0].z-z0))
     fig,ax = plt.subplots(constrained_layout=True)
-    y = db([r.SNR[idx_z] for r in R])
+    y = np.array([r.SNR[idx_z] for r in R])*Navg
+    labeltext = 'SNR @ '
+    if dBscale:
+        y = db([r.SNR[idx_z] for r in R])
+        labeltext = 'SNR (dB) @ '
     ax.plot(param_vec,y)
     ax.set_xlabel(r'Sweep parameter')
-    ax.set_ylabel(r'$SNR$ (dB) @ '+"{:.1f}".format(R[0].z[idx_z]*1e-3)+' km')
+    ax.set_ylabel(labeltext+"{:.1f}".format(R[0].z[idx_z]*1e-3)+' km')
     ax.grid()
 
 def plot_PSD_at_start(R):
@@ -309,7 +320,7 @@ def plot_PSD_bril_at_zi(R0,zi):
 # %% Rune code
 if __name__ == '__main__':
     # Specify the path to the subfolder containing the .pkl files
-    subfolder_path = file_dir+r"\data\MI_test\meas_compare_dfm\noise_-25"
+    subfolder_path = file_dir+r"\data\MI_test\meas_compare_dfm\noise_-15_fitpower"
 
     # List all files in the subfolder
     file_list = os.listdir(subfolder_path)
@@ -326,17 +337,18 @@ if __name__ == '__main__':
 
 # %% Plotting
 if __name__ == '__main__':
-    z0 = 80e3
+    z0 = 40e3
+    Navg = 1024
     plt.close('all')
     #plot_Pinband_vs_z(R)
     plot_Pbril_vs_z(R)
     plot_PSD_vs_lam(R,z0=z0)
     #plot_PSDbril_PSDmi_ratio_vs_z(R)
     plot_PSDnoise_vs_z(param_vec,R)
-    plot_SNR_vs_z(param_vec,R)
+    plot_SNR_vs_z(param_vec,R,Navg=Navg)
     #plot_PSDbril_PSDmi_ratio_vs_sweepparam(param_vec,R)
     plot_PSDbril_vs_sweepparam(param_vec,R,z0)
-    plot_SNR_vs_sweepparam(param_vec,R,z0=z0)
+    plot_SNR_vs_sweepparam(param_vec,R,z0=z0,Navg=Navg)
     plot_PSD_at_zi(R[-1],0)
     plt.show()
 
