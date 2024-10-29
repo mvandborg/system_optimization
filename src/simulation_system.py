@@ -12,7 +12,8 @@ from scipy.constants import c
 from scipy.constants import h as h_planck
 from scipy.signal import butter,freqz
 from numpy import pi
-from .help_functions import dbm, inv_dbm, norm_fft, norm_ifft, PSD2ESD,PSD_dbmGHz2dbmnm
+from .help_functions import dbm, inv_dbm, norm_fft, norm_ifft,\
+    PSD2ESD,PSD_dbmGHz2dbmnm
 from numpy.fft import fft,ifft,fftfreq,fftshift
 c = c*1e-9              # Unit m/ns
 
@@ -69,7 +70,8 @@ class System_simulation_class:
         self.g_b = g_b
         self.vg = c/ng
         
-    def add_section(self,L_co,L_edf,L_fib,Fiber_co,Fiber_edf,Fiber_fib,Fiber_pd,C):
+    def add_section(self,L_co,L_edf,L_fib,Fiber_co,
+                    Fiber_edf,Fiber_fib,Fiber_pd,C):
         self.Nsec+=1
         self.L_co = np.append(self.L_co,L_co)
         self.L_edf = np.append(self.L_edf,L_edf)
@@ -84,10 +86,12 @@ class System_simulation_class:
 
     
     def add_noise(self,lam_noise_min,lam_noise_max,Nlamnoise):
-        self.lam_noise_init = np.linspace(lam_noise_min,lam_noise_max,Nlamnoise+1)
+        self.lam_noise_init = np.linspace(lam_noise_min,
+                                          lam_noise_max,Nlamnoise+1)
         self.lam_noise = self.lam_noise_init[0:-1]
         self.f_noise = c/self.lam_noise
-        self.BW_noise = c*(1/self.lam_noise_init[0:-1]-1/self.lam_noise_init[1:])
+        self.BW_noise = c*(1/self.lam_noise_init[0:-1]\
+            -1/self.lam_noise_init[1:])
         self.idx_noise = np.argmin(np.abs(self.lam_noise-self.lam_pr))
     
     def run(self):
@@ -143,6 +147,8 @@ class Simulation_pulsed_single_fiber:
         Xre = np.random.normal(size=self.N)
         Xim = np.random.normal(size=self.N)
         self.ASDnoise = np.sqrt(self.ESDnoise_nJGHz/2)*(Xre+1j*Xim)
+        #self.ASDnoise = np.sqrt(self.ESDnoise_nJGHz)*\
+        #    np.exp(2j*np.pi*np.random.random(self.N))
         
         # Phase noise
         phase = np.zeros(self.N)
@@ -217,14 +223,16 @@ class Simulation_pulsed_single_fiber:
         
 # Class of multiple section fiber propagation for MI investigation
 class Simulation_pulsed_sections_fiber(Simulation_pulsed_single_fiber):
-    def __init__(self,t,A0,L,Nz_save,Fiber,Nsec,PSDnoise_dbmGHz=-72.9,linewidth=0):
+    def __init__(self,t,A0,L,Nz_save,Fiber,Nsec,
+                 PSDnoise_dbmGHz=-72.9,linewidth=0):
         super().__init__(t,A0,L,Nz_save,Fiber,PSDnoise_dbmGHz,linewidth)
         self.Nsec = Nsec
     
     def run(self):
         Atot = []
         ztot = []
-        z1,A1 = gnls1(self.t,self.omega,self.A0,self.L,self.Fiber,self.Nz_save)
+        z1,A1 = gnls1(self.t,self.omega,self.A0,
+                      self.L,self.Fiber,self.Nz_save)
         Atot = A1
         ztot = z1
         if type(self.Fiber.alpha)==list:
@@ -233,7 +241,8 @@ class Simulation_pulsed_sections_fiber(Simulation_pulsed_single_fiber):
             G = np.exp(self.Fiber.alpha*self.L)
         for i in range(1,self.Nsec):
             A0_new = np.sqrt(G)*A1[:,-1]
-            z1,A1 = gnls1(self.t,self.omega,A0_new,self.L,self.Fiber,self.Nz_save)
+            z1,A1 = gnls1(self.t,self.omega,A0_new,self.L,
+                          self.Fiber,self.Nz_save)
             Atot = np.concatenate([Atot,A1[:,1:]],axis=1)
             ztot = np.concatenate([ztot,ztot[-1]+z1[1:]])
         self.z = ztot
@@ -243,34 +252,41 @@ class Simulation_pulsed_sections_fiber(Simulation_pulsed_single_fiber):
 
 # Class of multiple section fiber propagation for MI investigation
 class Simulation_pulsed_sections2_fiber(Simulation_pulsed_single_fiber):
-    def __init__(self,t,A0,L1,L2,Nz_save,Fiber1,Fiber2,PSDnoise_dbmHz,Nsec):
-        super().__init__(t,A0,[L1,L2],Nz_save,[Fiber1,Fiber2],PSDnoise_dbmHz)
+    def __init__(self,t,A0,L1,L2,Nz_save,Fiber1,Fiber2,PSDnoise_dbmHz,Nsec,
+                 linewidth=0):
+        super().__init__(t,A0,[L1,L2],Nz_save,[Fiber1,Fiber2],PSDnoise_dbmHz,
+                         linewidth=linewidth)
         self.Nsec = Nsec
     
     def run(self):
         Lsec = np.sum(self.L)
-        G = np.exp(self.Fiber[0].alpha[1]*self.L[0]+self.Fiber[1].alpha[1]*self.L[1])
+        G = np.exp(self.Fiber[0].alpha*self.L[0]\
+            +self.Fiber[1].alpha*self.L[1])
         
         Atot = []
         ztot = []
         
         # First propagation
-        z1,A1 = gnls1(self.t,self.omega,self.A0,self.L[0],self.Fiber[0],self.Nz_save)
+        z1,A1 = gnls1(self.t,self.omega,self.A0,self.L[0],
+                      self.Fiber[0],self.Nz_save)
         Atot = A1
         ztot = z1
         A0_new = A1[:,-1]
-        z1,A1 = gnls1(self.t,self.omega,A0_new,self.L[1],self.Fiber[1],self.Nz_save)
+        z1,A1 = gnls1(self.t,self.omega,A0_new,self.L[1],
+                      self.Fiber[1],self.Nz_save)
         Atot = np.concatenate([Atot,A1[:,1:]],axis=1)
         ztot = np.concatenate([ztot,ztot[-1]+z1[1:]])
         
         # Next propagations
         for i in range(1,self.Nsec):
             A0_new = np.sqrt(G)*A1[:,-1]
-            z1,A1 = gnls1(self.t,self.omega,A0_new,self.L[0],self.Fiber[0],self.Nz_save)
+            z1,A1 = gnls1(self.t,self.omega,A0_new,self.L[0],
+                          self.Fiber[0],self.Nz_save)
             Atot = np.concatenate([Atot,A1[:,1:]],axis=1)
             ztot = np.concatenate([ztot,ztot[-1]+z1[1:]])
             A0_new = A1[:,-1]
-            z1,A1 = gnls1(self.t,self.omega,A0_new,self.L[1],self.Fiber[1],self.Nz_save)
+            z1,A1 = gnls1(self.t,self.omega,A0_new,self.L[1],
+                          self.Fiber[1],self.Nz_save)
             Atot = np.concatenate([Atot,A1[:,1:]],axis=1)
             ztot = np.concatenate([ztot,ztot[-1]+z1[1:]])
         self.z = ztot
@@ -283,8 +299,9 @@ class Simulation_pulsed_sections2_fiber(Simulation_pulsed_single_fiber):
 class Simulation_pulsed_customsections2(Simulation_pulsed_single_fiber):
     # L is an N x 2 array, with N sections of two lengths.
     # Fiber is an N x 2 array of Fiber classes.
-    def __init__(self,t,A0,L_arr,Nz_save,Fiber_arr,PSDnoise_dbmHz):
-        super().__init__(t,A0,L_arr,Nz_save,Fiber_arr,PSDnoise_dbmHz)
+    def __init__(self,t,A0,L_arr,Nz_save,Fiber_arr,PSDnoise_dbmHz,linewidth=0):
+        super().__init__(t,A0,L_arr,Nz_save,Fiber_arr,PSDnoise_dbmHz,
+                         linewidth=linewidth)
         self.Nsec = len(L_arr)
 
     def run(self):
@@ -304,7 +321,8 @@ class Simulation_pulsed_customsections2(Simulation_pulsed_single_fiber):
         # Next propagations
         for i in range(1,self.Nsec):
             # Calculate the loss of the former section
-            loss_neper = np.sum([self.Fiber[i-1][j].alpha[1]*self.L[i-1][j] for j in range(len(self.L[i-1]))])
+            loss_neper = np.sum([self.Fiber[i-1][j].alpha[1]*self.L[i-1][j]\
+                for j in range(len(self.L[i-1]))])
             G = np.exp(loss_neper)
             A0_new = np.sqrt(G)*A1[:,-1]
             for j in range(0,len(self.L[i])):

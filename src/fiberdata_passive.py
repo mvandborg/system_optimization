@@ -15,9 +15,10 @@ c_km_ps = 0.2998e-6         # Unit km/ps
 NP_TO_DB = 4.34
 
 class Passivefiber_class:
-    def __init__(self,lam,alpha_db=0.2,D=17,Aeff=80,ng=1.46,name='NA'):
+    def __init__(self,lam,alpha_db=0.2,D=17,Aeff=80,ng=1.46,
+                 n2=2.25,name='NA'):
         self.name = name        
-        self.n2 = 2.6e-20                       # Nonlinear coefficient m2/W  
+        self.n2 = n2*1e-20                      # Nonlinear coefficient m2/W  
         
         self.lam = lam                          # Wavelengths (m)
         self.alpha_db = alpha_db                # Loss in dB/km
@@ -34,7 +35,8 @@ class Passivefiber_class:
         
         self.f = c_m_ns/self.lam                # Frequency (GHz)
         self.omega = 2*pi*self.f                # Angular frequency (GHz)
-        self.gamma = self.n2*self.omega/(c_m_ns*self.Aeff)   # Nonlinear coefficient (1/W*m)      
+        # Nonlinear coefficient (1/W*m)      
+        self.gamma = self.n2*self.omega/(c_m_ns*self.Aeff)   
         
     def add_raman(self,df,gr):
         self.fr = 0.18
@@ -57,6 +59,7 @@ class Passivefiber_class:
         S_dat = dat['Disp_slope']
         Aeff_dat = dat['Aeff']
         ng_dat = dat['ng']
+        n2_dat = dat['n2']
         name = dat['name']
         
         if isinstance(lam,(list,np.ndarray)):
@@ -69,10 +72,12 @@ class Passivefiber_class:
         
         D = D_dat+dlam_nm*S_dat    # Calculate D for the specified wavelengths
         Aeff = Aeff_dat*np.ones(N)  # Assume constant Aeff
+        n2 = n2_dat*np.ones(N)      # Assume constant n2
         ng = ng_dat+c_km_ps*(D_dat*dlam_nm+S_dat*dlam_nm**2)
         
         A2 = 8.87e11     # alpha = A1+A2/lam**4 (unit dB/nm**4)
         alpha_db = alpha_db_dat+A2*(lam_nm**-4-lam_dat**-4)
                 
-        return cls(lam,alpha_db=alpha_db,D=D,Aeff=Aeff,ng=ng,name=name)
+        return cls(lam,alpha_db=alpha_db,D=D,Aeff=Aeff,
+                   ng=ng,n2=n2,name=name)
 

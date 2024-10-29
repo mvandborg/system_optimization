@@ -5,5 +5,6 @@
     "Disp_slope": 0.07,
     "Aeff": 85,
     "ng": 1.465,
+    "n2":2.25,
     "name": "Sumitomo LL"
 }
