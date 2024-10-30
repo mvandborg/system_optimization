@@ -20,7 +20,6 @@ def convert_Ppr2gain(Ppr):
     A0 = 3.89e3
     A1 = -58.54
     return A0*Ppr+A1
-    
 
 # %% Define propagation fibers
 def A0_func(t,T0,Ppeak0):
