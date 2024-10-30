@@ -330,7 +330,7 @@ def gnls1(T,W,A0,L,Fiber,nsaves):
     A[:,0] = A0
     for iz in range(1,len(z)):
         res = solve_ivp(NonlinOperator1,[z[iz-1],z[iz]],BF,method='RK45',
-                        t_eval=np.array([z[iz]]),rtol=1e-8,atol=1e-8,
+                        t_eval=np.array([z[iz]]),rtol=1e-12,atol=1e-12,
                         args=(D,gamma))
         BF = res.y[:,0]
         A[:,iz] = ifft(BF*exp(D*z[iz]))
