@@ -29,7 +29,7 @@ if __name__ == '__main__':
     # Directory for saving the data
     savedir = os.path.join(
             this_dir,
-            'data\\MI_test\\meas_compare_dfm\\noise_calculated_fine'
+            'data/MI_test/meas_compare_dfm/noise_calculated_fine'
             )
 
     L = 100e3               # Fiber length (km)
@@ -68,7 +68,6 @@ if __name__ == '__main__':
     Ppeak0_vec = np.array([138,158,174,203,232,254,279,
                            321,357,414,448,512,564])*1e-3
     Ppeak0_vec = np.linspace(110,620,51)*1e-3      # Pump power (W)
-    Ppeak0_vec = np.array([Ppeak0_vec[-2]])
     G_vec = convert_Ppr2gain(Ppeak0_vec)
         
     # Noise calculations
