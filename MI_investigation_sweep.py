@@ -50,14 +50,14 @@ Fiber = Passivefiber_class.from_data_sheet( fiberdata_path,
 Tmax = T0*7             # Simulation window size (ns)
 N = 2**15
 t = np.linspace(-Tmax/2,Tmax/2,N)
-Nz_save = 101
+Nz_save = 21
 Nsec = 1
 
 step_sweep = 10
 Ppeak0_vec = np.array([166,192,231,263,301,369])*1e-3 
 Ppeak0_vec = np.array([168,188,211,236,264,297,334,374,
                        420,471,529,592,664])*1e-3 
-Ppeak0_vec = Ppeak0_vec/2
+Ppeak0_vec = np.array([int(p/2) for p in Ppeak0_vec)
 #Ppeak0_vec = np.arange(10,250,step_sweep)*1e-3      # Pump power (W)
 #PSDnoise_dbmGHz_vec = np.array([-151,-141,-131,-121])+90
 N_sweep = len(Ppeak0_vec)
