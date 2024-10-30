@@ -62,12 +62,13 @@ Ppeak0_arr = np.linspace(50,200,24)*1e-3
 savedir = this_dir+r'/data/MI_test/neethusetup/TWXLinlastsec'
 
 def sim_func(args):
-    i, Ppeak0, t, T0, L_arr, Nz_save, Fiber_arr, PSDnoise_dbmGHz, Nsec, savedir = args
+    i, Ppeak0, t, T0, L_arr, Nz_save, Fiber_arr, \
+        PSDnoise_dbmGHz, Nsec, savedir = args
     print('Start:\t Simulation no. '+str(i))
     start_time = time.time()
     A0 = A0_func(t, T0, Ppeak0)
-    S = simsys.Simulation_pulsed_customsections2(t, A0, L_arr, Nz_save, Fiber_arr, 
-                                                  PSDnoise_dbmGHz)
+    S = simsys.Simulation_pulsed_customsections2(t, A0, L_arr, Nz_save, 
+                                                 Fiber_arr,PSDnoise_dbmGHz)
     z, A = S.run()
     savefname = f'P0_{int(Ppeak0 * 1000)}.pkl'
     #savefname = f'L_{int(L_arr[1][0]*1e-3)}.pkl'

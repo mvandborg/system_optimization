@@ -77,3 +77,25 @@ def moving_average(a, n=3):
 
 def lorentzian(f,f0,fwhm):
     return (fwhm/2)**2/((f-f0)**2+(fwhm/2)**2)
+
+def get_ASE_noise_WGHz(G=20,lam0=1550e-9):
+    n_sp = 1.5
+    h = 6.626e-34
+    c = 2.998e8
+    nu = c/lam0
+    PSD_ase = n_sp*h*nu*(G-1) # PSD of ASE (W/Hz)
+    return PSD_ase*1e9
+
+def get_ASE_ql(lam0=1550e-9):
+    h = 6.626e-34
+    c = 2.998e8
+    nu = c/lam0
+    PSD_ase = h*nu # PSD of ASE (W/Hz)
+    return PSD_ase
+
+def get_ASE_noise_dbmnm(G,lam_pr):
+    PSD_ase = get_ASE_noise_WGHz(G=1000,lam0=lam_pr)
+    PSD_ase_dbmGHz = dbm(PSD_ase)
+    PSDnoise_dbmGHz = PSD_ase_dbmGHz
+    PSD_noise_dbmnm = PSD_dbmGHz2dbmnm(PSDnoise_dbmGHz,lam_pr*1e9,2.998e8)
+    return PSD_noise_dbmnm
