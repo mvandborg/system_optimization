@@ -15,7 +15,9 @@ hpc_output/
 .conda
 *.pytest*
 
+
 # Cluster server output files
 Error*.txt
 Output*.txt
 config.json
+env/
